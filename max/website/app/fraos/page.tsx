@@ -1,4 +1,5 @@
 import { FraosEditionPanel } from '@/components/FraosEditionPanel'
+import { FraosOpenSourceBanner } from '@/components/FraosOpenSourceBanner'
 import { ScrollReveal } from '@/components/motion/ScrollReveal'
 import { StaggerEntrance } from '@/components/motion/StaggerEntrance'
 import { JsonLd } from '@/components/seo/JsonLd'
@@ -48,6 +49,9 @@ export default function FraosPage() {
             </ScrollReveal>
           ))}
         </div>
+        <ScrollReveal delay={0.12}>
+          <FraosOpenSourceBanner />
+        </ScrollReveal>
       </section>
     </>
   )

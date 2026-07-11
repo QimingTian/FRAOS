@@ -6,12 +6,22 @@ export const PRODUCT_PLANS: ProductPlan[] = ['standard', 'pro', 'max', 'ultra']
 
 export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL?.trim() || 'https://YOUR_DOMAIN'
 
+export const FRAOS_GITHUB_URL = 'https://github.com/QimingTian/FRAOS'
+
 export const FRAOS = {
   name: 'FRAOS',
   fullName: 'Fully Remote Automated Observatory System',
   /** Shared intro — homepage card and FRAOS hero. */
   homeSummary:
     'The intelligent operating system for unattended remote observatories — advanced scheduling algorithms, closed-loop automation, and a private cloud hub for every site. No VPN, no screen sharing: just two apps.',
+  openSource: {
+    eyebrow: 'Open source',
+    title: 'Build it yourself — or let Borean Astro run it',
+    body:
+      'FRAOS source is public on GitHub. Self-host Control, Station, and the cloud hub, and configure R2, Astrometry, storage, billing, and every other integration yourself.',
+    contrast:
+      'Licensed editions from Borean Astro are the same software — we handle cloud setup, keys, hosting, and ongoing configuration so you can image instead of ops.',
+  },
 } as const
 
 export const ASC = {

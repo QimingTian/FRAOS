@@ -1,16 +1,29 @@
 import { FraosEditionPanel } from '@/components/FraosEditionPanel'
+import { FraosOpenSourceBanner } from '@/components/FraosOpenSourceBanner'
 import { ScrollReveal } from '@/components/motion/ScrollReveal'
 import { StaggerEntrance } from '@/components/motion/StaggerEntrance'
+import { JsonLd } from '@/components/seo/JsonLd'
 import { FRAOS, PRODUCT_PLANS } from '@/lib/site-config'
+import { FRAOS_PRODUCT_DESCRIPTION, buildPageMetadata, organizationJsonLd, websiteJsonLd } from '@/lib/seo'
 
-export const metadata = {
-  title: 'FRAOS — Borean Astro',
-  description: FRAOS.homeSummary,
-}
+export const metadata = buildPageMetadata({
+  title: 'FRAOS — Fully Remote Automated Observatory System',
+  description: FRAOS_PRODUCT_DESCRIPTION,
+  path: '/fraos',
+  keywords: [
+    'FRAOS',
+    'remote observatory software',
+    'automated observatory system',
+    'telescope scheduling',
+    'NINA remote control',
+    'observatory cloud hub',
+  ],
+})
 
 export default function FraosPage() {
   return (
     <>
+      <JsonLd data={[organizationJsonLd(), websiteJsonLd()]} />
       <section className="page-shell pb-8 pt-20 text-center md:pt-28">
         <StaggerEntrance>
           <h1
@@ -36,6 +49,9 @@ export default function FraosPage() {
             </ScrollReveal>
           ))}
         </div>
+        <ScrollReveal delay={0.12}>
+          <FraosOpenSourceBanner />
+        </ScrollReveal>
       </section>
     </>
   )
