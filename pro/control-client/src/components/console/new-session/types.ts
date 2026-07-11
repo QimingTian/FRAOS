@@ -37,4 +37,12 @@ export type SessionPrefill = {
   target: string
   raHours?: number
   decDeg?: number
+  mosaicMode?: boolean
+  mosaicPanels?: Array<{
+    id: number
+    raHours: number
+    decDeg: number
+    positionAngleDeg: number
+    name: string
+  }>
 }

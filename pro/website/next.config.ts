@@ -7,6 +7,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   outputFileTracingRoot: path.join(__dirname),
+  outputFileTracingIncludes: {
+    '/api/imaging/variable-stars': ['./Variables/**/*'],
+  },
   async redirects() {
     return [
       { source: '/', destination: '/fraos', permanent: true },

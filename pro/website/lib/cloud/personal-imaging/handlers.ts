@@ -82,6 +82,37 @@ export function parseQueueBody(body: Record<string, unknown>): QueueCreateInput 
     observatoryLat: typeof body.observatoryLat === 'number' ? body.observatoryLat : null,
     observatoryLon: typeof body.observatoryLon === 'number' ? body.observatoryLon : null,
     observatoryElevationM: typeof body.observatoryElevationM === 'number' ? body.observatoryElevationM : null,
+    mosaicMode: body.mosaicMode === true,
+    mosaicPanels: Array.isArray(body.mosaicPanels)
+      ? body.mosaicPanels
+          .map((p) => {
+            if (!p || typeof p !== 'object') return null
+            const rec = p as Record<string, unknown>
+            const id = Number(rec.id)
+            const raHours = Number(rec.raHours)
+            const decDeg = Number(rec.decDeg)
+            const positionAngleDeg = Number(rec.positionAngleDeg)
+            if (![id, raHours, decDeg, positionAngleDeg].every((x) => Number.isFinite(x))) return null
+            return {
+              id,
+              raHours,
+              decDeg,
+              positionAngleDeg,
+              name: typeof rec.name === 'string' ? rec.name : `Panel ${id}`,
+            }
+          })
+          .filter(
+            (
+              p
+            ): p is {
+              id: number
+              raHours: number
+              decDeg: number
+              positionAngleDeg: number
+              name: string
+            } => p != null
+          )
+      : undefined,
   }
 }
 
@@ -112,10 +143,14 @@ export async function imagingGetStorage(tenantId: string) {
 export async function imagingCreateSession(tenantId: string, body: QueueCreateInput) {
   const blocked = await assertRawZipAllowed(tenantId, body.outputMode)
   if (blocked) return blocked
-  return runWithTenantImaging(tenantId, async () => {
-    const session = await createQueueSession(body, randomUUID(), tenantId)
-    return sessionToPublic(session)
-  })
+  try {
+    return await runWithTenantImaging(tenantId, async () => {
+      const session = await createQueueSession(body, randomUUID(), tenantId)
+      return sessionToPublic(session)
+    })
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : 'Create failed', status: 400 }
+  }
 }
 
 export async function imagingUpdateSession(tenantId: string, sessionId: string, body: QueueCreateInput) {
@@ -144,7 +179,12 @@ export async function imagingDeleteSession(tenantId: string, sessionId: string) 
 }
 
 export async function imagingReconcile(tenantId: string) {
-  return runWithTenantImaging(tenantId, () => reconcilePendingScheduleStatus())
+  return runWithTenantImaging(tenantId, async () => {
+    await reconcilePendingScheduleStatus()
+    void import('@/lib/imaging/weather-safety-estop').then((m) =>
+      m.triggerWeatherSafetyEmergencyStopCheck(tenantId)
+    )
+  })
 }
 
 export async function imagingNinaSequence(tenantId: string) {
@@ -158,6 +198,10 @@ export async function imagingSessionProgress(tenantId: string, detail: Record<st
 export async function imagingAgentPulse(tenantId: string, ninaRunning: boolean) {
   return runWithTenantImaging(tenantId, () => {
     touchAgentPulse(ninaRunning)
+    // Night weather-safety (ASC rain / 20 km thunder); daytime no-ops inside the check.
+    void import('@/lib/imaging/weather-safety-estop').then((m) =>
+      m.triggerWeatherSafetyEmergencyStopCheck(tenantId)
+    )
     return getObservatoryState()
   })
 }

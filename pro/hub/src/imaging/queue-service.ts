@@ -105,6 +105,14 @@ export type QueueCreateInput = {
   observatoryLat?: number | null
   observatoryLon?: number | null
   observatoryElevationM?: number | null
+  mosaicMode?: boolean
+  mosaicPanels?: Array<{
+    id: number
+    raHours: number
+    decDeg: number
+    positionAngleDeg: number
+    name: string
+  }>
 }
 
 export async function createQueueSession(
@@ -129,10 +137,28 @@ export async function createQueueSession(
   }
 
   const outputModeRaw = typeof input.outputMode === 'string' ? input.outputMode : 'none'
-  const outputMode: SessionOutputMode = outputModeRaw === 'raw_zip' ? 'raw_zip' : 'none'
+  // Legacy stacked_master coerces to raw_zip
+  const outputMode: SessionOutputMode =
+    outputModeRaw === 'raw_zip' || outputModeRaw === 'stacked_master' ? 'raw_zip' : 'none'
   const sessionType: SessionType =
     input.sessionType === 'variable_star' ? 'variable_star' : 'dso'
   const firstPlan = input.filterPlans?.[0]
+  const mosaicMode = sessionType === 'dso' && input.mosaicMode === true
+  const mosaicPanels =
+    mosaicMode && Array.isArray(input.mosaicPanels) && input.mosaicPanels.length > 0
+      ? input.mosaicPanels
+      : null
+
+  const remainingSeed =
+    (input.filterPlans ?? []).map((p) => ({
+      filterName: p.filterName,
+      exposureSeconds: p.exposureSeconds,
+      countRemaining: p.count,
+    }))
+  const mosaicRemainingByPanel =
+    mosaicMode && mosaicPanels
+      ? mosaicPanels.map(() => remainingSeed.map((r) => ({ ...r })))
+      : null
 
   const draft = insertSession({
     id,
@@ -142,7 +168,7 @@ export async function createQueueSession(
     outputMode,
     outputModeRequested: input.outputModeRequested ?? outputModeRaw,
     whenClosedBehavior: input.whenClosedBehavior ?? null,
-    projectMode: input.projectMode === true,
+    projectMode: input.projectMode === true || mosaicMode,
     cameraCoolingTempC: input.cameraCoolingTempC ?? null,
     raHours: input.raHours ?? null,
     decDeg: input.decDeg ?? null,
@@ -153,6 +179,9 @@ export async function createQueueSession(
     estimatedDurationSeconds: input.estimatedDurationSeconds ?? null,
     variableStarBlockHours: input.variableStarBlockHours ?? null,
     catalogQuery: input.catalogQuery ?? null,
+    mosaicMode,
+    mosaicPanels,
+    mosaicRemainingByPanel,
   })
 
   if (draft.projectMode) {

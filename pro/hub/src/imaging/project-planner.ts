@@ -23,6 +23,15 @@ export type ProjectTarget = {
   /** Total filter plan for the whole project (frame counts). */
   filterPlansTotal: FilterPlan[]
   createdAt: string
+  mosaicMode?: boolean
+  mosaicPanels?: Array<{
+    id: number
+    raHours: number
+    decDeg: number
+    positionAngleDeg: number
+    name: string
+  }> | null
+  mosaicRemainingByPanel?: FilterRemaining[][] | null
 }
 
 export type ProjectTonightPlan = {
@@ -32,6 +41,8 @@ export type ProjectTonightPlan = {
   plannedStartIso: string
   plannedEndIso: string
   durationSeconds: number
+  mosaicPanelIndex?: number
+  mosaicSubIndex?: number
 }
 
 export function tonightDurationSecondsFromPlans(plans: FilterPlan[]): number {
@@ -241,6 +252,7 @@ function hasSchedulableFreeTonight(
 /**
  * One sub-session plan per schedulable free interval tonight. Remaining frames carry to later nights;
  * `startNightIndex` is the next global session number for this project.
+ * Mosaic mode: pick the earliest-starting panel each round (cross-panel interleave).
  */
 export function planTonightSubSessions(input: {
   target: ProjectTarget
@@ -263,6 +275,87 @@ export function planTonightSubSessions(input: {
 
   if (!hasSchedulableFreeTonight(freeIntervals, weatherPermittedIntervals, windowStartMs, deadlineMs, minWindowMs)) {
     return []
+  }
+
+  const mosaic =
+    target.mosaicMode === true &&
+    Array.isArray(target.mosaicPanels) &&
+    target.mosaicPanels.length > 0
+
+  if (mosaic) {
+    const panels = target.mosaicPanels!
+    const panelRemaining: FilterRemaining[][] =
+      target.mosaicRemainingByPanel && target.mosaicRemainingByPanel.length === panels.length
+        ? target.mosaicRemainingByPanel.map((rows) => rows.map((r) => ({ ...r })))
+        : panels.map(() => remaining.map((r) => ({ ...r })))
+    const mosaicSubNext = new Map<number, number>()
+    const nextMosaicSub = (panelIndex: number) => {
+      const n = (mosaicSubNext.get(panelIndex) ?? 1)
+      mosaicSubNext.set(panelIndex, n + 1)
+      return n
+    }
+    let sessionIndex = startNightIndex
+    const plans: ProjectTonightPlan[] = []
+    let workingFree = [...freeIntervals].sort((a, b) => a.startMs - b.startMs)
+    let globalCursorMs = Math.max(nowMs, windowStartMs)
+
+    while (panelRemaining.some((rows) => rows.some((r) => r.countRemaining > 0))) {
+      let best: {
+        panelIndex: number
+        finalPlans: FilterPlan[]
+        placedStart: number
+        actualDurationMs: number
+      } | null = null
+
+      for (let pi = 0; pi < panels.length; pi++) {
+        const panel = panels[pi]!
+        const workingRemaining = panelRemaining[pi]!
+        if (workingRemaining.reduce((s, r) => s + r.countRemaining, 0) <= 0) continue
+        const panelTarget: ProjectTarget = {
+          ...target,
+          raHours: panel.raHours,
+          decDeg: panel.decDeg,
+        }
+        for (const free of workingFree) {
+          const cursorMs = Math.max(free.startMs, globalCursorMs)
+          const planningEndMs = Math.min(free.endMs, deadlineMs)
+          if (planningEndMs - cursorMs < minWindowMs) continue
+          const placed = placeSubSessionInFreeWindow(
+            panelTarget,
+            cursorMs,
+            planningEndMs,
+            free.endMs,
+            workingRemaining,
+            weatherPermittedIntervals,
+            nowMs,
+            windowStartMs,
+            deadlineMs
+          )
+          if (!placed) continue
+          if (!best || placed.placedStart < best.placedStart) {
+            best = { panelIndex: pi + 1, ...placed }
+          }
+        }
+      }
+
+      if (!best) break
+      const { panelIndex, finalPlans, placedStart, actualDurationMs } = best
+      const placedEnd = placedStart + actualDurationMs
+      plans.push({
+        nightKey: strip.nightKey,
+        nightIndex: sessionIndex++,
+        filterPlansTonight: finalPlans,
+        plannedStartIso: new Date(placedStart).toISOString(),
+        plannedEndIso: new Date(placedEnd).toISOString(),
+        durationSeconds: tonightDurationSecondsFromPlans(finalPlans),
+        mosaicPanelIndex: panelIndex,
+        mosaicSubIndex: nextMosaicSub(panelIndex),
+      })
+      panelRemaining[panelIndex - 1] = subtractRemaining(panelRemaining[panelIndex - 1]!, finalPlans)
+      workingFree = subtractOccupiedFromFree(workingFree, { startMs: placedStart, endMs: placedEnd })
+      globalCursorMs = Math.max(globalCursorMs, placedEnd)
+    }
+    return plans
   }
 
   let workingRemaining = remaining.map((r) => ({ ...r }))

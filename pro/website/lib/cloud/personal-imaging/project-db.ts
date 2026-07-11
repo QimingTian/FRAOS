@@ -64,9 +64,11 @@ export function upsertProjectNight(input: {
   filterPlansTonight: FilterPlan[]
   plannedStartIso: string | null
   ninaSequenceJson: string | null
+  adminForceRunUntilIso?: string | null
 }): void {
   const state = getImagingState()
   const existingIdx = state.projectNights.findIndex((n) => n.id === input.id)
+  const existing = existingIdx >= 0 ? state.projectNights[existingIdx]! : null
   const night: ProjectNight = {
     id: input.id,
     projectId: input.projectId,
@@ -75,16 +77,45 @@ export function upsertProjectNight(input: {
     status: input.status,
     filterPlansTonight: input.filterPlansTonight,
     plannedStartIso: input.plannedStartIso,
+    adminForceRunUntilIso:
+      input.adminForceRunUntilIso !== undefined
+        ? input.adminForceRunUntilIso
+        : (existing?.adminForceRunUntilIso ?? null),
     ninaSequenceJson: input.ninaSequenceJson,
-    ninaDeliveredAt: existingIdx >= 0 ? state.projectNights[existingIdx]!.ninaDeliveredAt : null,
-    completedAt: existingIdx >= 0 ? state.projectNights[existingIdx]!.completedAt : null,
-    failedAt: existingIdx >= 0 ? state.projectNights[existingIdx]!.failedAt : null,
+    ninaDeliveredAt: existing?.ninaDeliveredAt ?? null,
+    completedAt: existing?.completedAt ?? null,
+    failedAt: existing?.failedAt ?? null,
   }
   if (existingIdx >= 0) {
     state.projectNights[existingIdx] = night
   } else {
     state.projectNights.push(night)
   }
+}
+
+export function patchProjectNightAdminForceRun(
+  nightId: string,
+  input: {
+    nightKey: string
+    plannedStartIso: string
+    adminForceRunUntilIso: string
+    ninaSequenceJson: string | null
+  }
+): ProjectNight | null {
+  const night = getProjectNightById(nightId)
+  if (!night) return null
+  upsertProjectNight({
+    id: night.id,
+    projectId: night.projectId,
+    nightKey: input.nightKey,
+    nightIndex: night.nightIndex,
+    status: 'scheduled',
+    filterPlansTonight: night.filterPlansTonight,
+    plannedStartIso: input.plannedStartIso,
+    ninaSequenceJson: input.ninaSequenceJson ?? night.ninaSequenceJson,
+    adminForceRunUntilIso: input.adminForceRunUntilIso,
+  })
+  return getProjectNightById(nightId)
 }
 
 export function replaceScheduledNights(
@@ -99,10 +130,31 @@ export function replaceScheduledNights(
   }>
 ): void {
   const state = getImagingState()
+  const nowMs = Date.now()
+  const forceRunIds = new Set(
+    state.projectNights
+      .filter(
+        (n) =>
+          n.projectId === projectId &&
+          n.nightKey === nightKey &&
+          n.status === 'scheduled' &&
+          n.adminForceRunUntilIso != null &&
+          Number.isFinite(Date.parse(n.adminForceRunUntilIso)) &&
+          Date.parse(n.adminForceRunUntilIso) > nowMs
+      )
+      .map((n) => n.id)
+  )
   state.projectNights = state.projectNights.filter(
-    (n) => !(n.projectId === projectId && n.nightKey === nightKey && n.status === 'scheduled')
+    (n) =>
+      !(
+        n.projectId === projectId &&
+        n.nightKey === nightKey &&
+        n.status === 'scheduled' &&
+        !forceRunIds.has(n.id)
+      )
   )
   for (const sub of subs) {
+    if (forceRunIds.has(sub.id)) continue
     upsertProjectNight({
       id: sub.id,
       projectId,

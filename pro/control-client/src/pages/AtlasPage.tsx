@@ -13,11 +13,24 @@ import { useObservatoryLocation } from '../lib/useObservatoryLocation'
 import { computeFov, overlayRotationDeg } from '../lib/equipment'
 import { useEquipment } from '../lib/useEquipment'
 import { computeFovOverlayRotationDeg } from '../lib/site/fov-overlay'
+import { calculateMosaicPanels } from '../lib/mosaic/calculate-mosaic-panels'
+import { layoutDeltaToScreenDelta } from '../lib/mosaic/panel-coordinates'
+import { PLAN_MOSAIC_DRAFT_KEY, type MosaicPanel } from '../lib/mosaic/framing-rectangle'
+import { AtlasFramingToolbar } from '../components/atlas/AtlasFramingToolbar'
+import { PlanFrameOverlays } from '../components/atlas/PlanFrameOverlays'
 
 export type RemotePrefill = {
   target: string
   raHours: number
   decDeg: number
+  mosaicMode?: boolean
+  mosaicPanels?: Array<{
+    id: number
+    raHours: number
+    decDeg: number
+    positionAngleDeg: number
+    name: string
+  }>
 }
 
 type AtlasPageProps = {
@@ -233,8 +246,10 @@ export function AtlasPage({ onSendToRemote }: AtlasPageProps) {
   const iframeRef = useRef<HTMLIFrameElement | null>(null)
   const tonightRibbonBarRef = useRef<HTMLDivElement | null>(null)
   const cameraFrameOverlayRef = useRef<HTMLDivElement | null>(null)
+  const mosaicOverlayRefs = useRef<Map<number, HTMLDivElement>>(new Map())
   const [viewerReady, setViewerReady] = useState(false)
   const [stelReady, setStelReady] = useState(false)
+  const [planMode, setPlanMode] = useState<'atlas' | 'framing'>('atlas')
   const [layers, setLayers] = useState<Record<LayerKey, boolean>>({
     landscapes: true,
     atmosphere: false,
@@ -250,15 +265,23 @@ export function AtlasPage({ onSendToRemote }: AtlasPageProps) {
   const [searchError, setSearchError] = useState<string | null>(null)
   const equipment = useEquipment()
   const [cameraFrameOn, setCameraFrameOn] = useState(false)
+  const [mosaicH, setMosaicH] = useState(1)
+  const [mosaicV, setMosaicV] = useState(1)
+  const [mosaicOverlapH, setMosaicOverlapH] = useState(10)
+  const [mosaicOverlapV, setMosaicOverlapV] = useState(10)
+  const [customMosaic, setCustomMosaic] = useState(false)
+  const [customPanels, setCustomPanels] = useState<MosaicPanel[]>([])
+  const [deletePanelId, setDeletePanelId] = useState(1)
+  const framingActive = planMode === 'framing' && equipment != null
   const cameraFrameProfile = useMemo((): CameraFrameProfile | null => {
-    if (!cameraFrameOn || !equipment) return null
+    if ((!cameraFrameOn && !framingActive) || !equipment) return null
     const fov = computeFov(equipment)
     return {
       fovWRad: fov.fovWidthDeg * DEG2RAD,
       fovHRad: fov.fovHeightDeg * DEG2RAD,
       positionAngleDeg: overlayRotationDeg(equipment),
     }
-  }, [cameraFrameOn, equipment, equipment?.positionAngleDeg, equipment?.fieldRotationDeg])
+  }, [cameraFrameOn, framingActive, equipment, equipment?.positionAngleDeg, equipment?.fieldRotationDeg])
   const [trackingTarget, setTrackingTarget] = useState<{ name: string; raHours: number; decDeg: number } | null>(null)
 
   const [alt30OverlayOn, setAlt30OverlayOn] = useState(false)
@@ -327,6 +350,81 @@ export function AtlasPage({ onSendToRemote }: AtlasPageProps) {
     return win?.stel ?? null
   }, [])
 
+  const getViewCenterRaDec = useCallback((): { raHours: number; decDeg: number } | null => {
+    const stel = getStel()
+    const obs = stel?.core?.observer
+    if (!stel?.convertFrame || !stel.c2s || !obs) return null
+    try {
+      const vICRF = stel.convertFrame(obs, 'VIEW', 'ICRF', [0, 0, -1, 0])
+      return icrfDirToRaDecHoursDeg(stel, vICRF)
+    } catch {
+      return null
+    }
+  }, [getStel])
+
+  const mosaicResult = useMemo(() => {
+    if (!framingActive || !equipment || !cameraFrameProfile) {
+      return { isMosaic: false, panels: [] as MosaicPanel[] }
+    }
+    const center = trackingTarget ?? { raHours: 0, decDeg: 0 }
+    // Prefer live viewport center when framing without a locked target.
+    const iframe = iframeRef.current
+    const stel = getStel()
+    const fov = stel?.core?.fov
+    const h = iframe?.clientHeight ?? 800
+    const w = iframe?.clientWidth ?? 1200
+    let centerRa = center.raHours
+    let centerDec = center.decDeg
+    if (stel?.convertFrame && stel.c2s && stel.core?.observer) {
+      try {
+        const vICRF = stel.convertFrame(stel.core.observer, 'VIEW', 'ICRF', [0, 0, -1, 0])
+        const conv = icrfDirToRaDecHoursDeg(stel, vICRF)
+        if (conv) {
+          centerRa = conv.raHours
+          centerDec = conv.decDeg
+        }
+      } catch {
+        /* keep tracking target */
+      }
+    }
+    const fovDeg = computeFov(equipment)
+    const vFovDeg =
+      typeof fov === 'number' && fov > 0 ? (fov * 180) / Math.PI : Math.max(fovDeg.fovHeightDeg * mosaicV, 1)
+    const hFovDeg = vFovDeg * (w / Math.max(1, h))
+    return calculateMosaicPanels({
+      centerRaHours: centerRa,
+      centerDecDeg: centerDec,
+      horizontalPanels: mosaicH,
+      verticalPanels: mosaicV,
+      horizontalOverlapPercent: mosaicOverlapH / 100,
+      verticalOverlapPercent: mosaicOverlapV / 100,
+      equipment,
+      viewportWidthPx: w,
+      viewportHeightPx: h,
+      viewportHFovDeg: hFovDeg,
+      viewportVFovDeg: vFovDeg,
+      viewportRotationDeg: 0,
+      previousRotationDeg: cameraFrameProfile.positionAngleDeg,
+    })
+  }, [
+    framingActive,
+    equipment,
+    cameraFrameProfile,
+    trackingTarget,
+    mosaicH,
+    mosaicV,
+    mosaicOverlapH,
+    mosaicOverlapV,
+    getStel,
+    stelReady,
+  ])
+
+  const framingPanels = customMosaic ? customPanels : mosaicResult.panels
+  const framingUsePanelOverlays = customMosaic
+    ? customPanels.length > 0
+    : mosaicResult.isMosaic
+  const framingIsMosaic = customMosaic ? customPanels.length > 1 : mosaicResult.isMosaic
+
   useEffect(() => {
     if (!stelReady) return
     const stel = getStel()
@@ -353,32 +451,66 @@ export function AtlasPage({ onSendToRemote }: AtlasPageProps) {
     }
   }, [stelReady, alt30OverlayOn, orbitOverlayOn])
 
-  /* Camera frame overlay: drive width/height every animation frame by reading
-   * core.fov + iframe clientHeight and writing directly to the overlay DOM.
-   * Avoids React setState on a 200 ms timer (which caused visible stepping
-   * while zooming). */
+  /* Camera / mosaic frame overlay: drive width/height every animation frame. */
   useEffect(() => {
     if (!cameraFrameProfile || !stelReady) return
     let rafId = 0
     const tick = () => {
-      const el = cameraFrameOverlayRef.current
       const iframe = iframeRef.current
       const stel = getStel()
       const fov = stel?.core?.fov
       const h = iframe?.clientHeight ?? 520
-      if (el && typeof fov === 'number' && fov > 0) {
+      const w = iframe?.clientWidth ?? 800
+      if (typeof fov === 'number' && fov > 0) {
         const scale = h / fov
-        el.style.width = `${cameraFrameProfile.fovWRad * scale}px`
-        el.style.height = `${cameraFrameProfile.fovHRad * scale}px`
-        // Field rotation: rotate the frame by the live on-screen orientation of the sensor.
-        const rot = computeFovOverlayRotationDeg(stel, cameraFrameProfile.positionAngleDeg)
-        el.style.transform = `translate(-50%, -50%) rotate(${rot ?? cameraFrameProfile.positionAngleDeg}deg)`
+        const rot =
+          computeFovOverlayRotationDeg(stel, cameraFrameProfile.positionAngleDeg) ??
+          cameraFrameProfile.positionAngleDeg
+        const apply = (el: HTMLDivElement, offsetX: number, offsetY: number) => {
+          el.style.width = `${cameraFrameProfile.fovWRad * scale}px`
+          el.style.height = `${cameraFrameProfile.fovHRad * scale}px`
+          el.style.setProperty('--panel-rot', `${rot}deg`)
+          el.style.transform = `translate(calc(-50% + ${offsetX}px), calc(-50% + ${offsetY}px)) rotate(${rot}deg)`
+        }
+
+        if (framingUsePanelOverlays) {
+          for (const [id, el] of Array.from(mosaicOverlayRefs.current.entries())) {
+            const panel = framingPanels.find((p) => p.id === id)
+            if (!panel) continue
+            let ox = panel.screenDeltaXPx
+            let oy = panel.screenDeltaYPx
+            if (
+              !customMosaic &&
+              panel.layoutDeltaXPx != null &&
+              panel.layoutDeltaYPx != null
+            ) {
+              const local = layoutDeltaToScreenDelta(
+                panel.layoutDeltaXPx,
+                panel.layoutDeltaYPx,
+                rot
+              )
+              ox = local.x
+              oy = local.y
+            }
+            apply(el, ox, oy)
+          }
+        } else {
+          const el = cameraFrameOverlayRef.current
+          if (el) apply(el, 0, 0)
+        }
       }
       rafId = window.requestAnimationFrame(tick)
     }
     rafId = window.requestAnimationFrame(tick)
     return () => window.cancelAnimationFrame(rafId)
-  }, [cameraFrameProfile, stelReady, getStel])
+  }, [
+    cameraFrameProfile,
+    stelReady,
+    getStel,
+    framingUsePanelOverlays,
+    framingPanels,
+    customMosaic,
+  ])
 
   /* Continuous re-centering fallback used when the engine has no catalog
    * match for a Simbad-resolved target. Converts the stored J2000 RA/Dec
@@ -533,9 +665,7 @@ export function AtlasPage({ onSendToRemote }: AtlasPageProps) {
     let raHours: number
     let decDeg: number
     let name: string
-    /* With the camera frame overlay on, the user is framing the *current* boresight; after a
-     * pan that is no longer the locked search target — use VIEW→ICRF instead of trackingTarget. */
-    const useViewportCenter = cameraFrameProfile !== null
+    const useViewportCenter = cameraFrameProfile !== null || planMode === 'framing'
     if (!useViewportCenter && trackingTarget) {
       ;({ raHours, decDeg, name } = trackingTarget)
     } else {
@@ -552,10 +682,91 @@ export function AtlasPage({ onSendToRemote }: AtlasPageProps) {
       }
       const raH = Math.floor(raHours)
       const raM = Math.floor((raHours - raH) * 60)
-      name = `Atlas view ${raH}h${raM.toString().padStart(2, '0')}m ${decDeg >= 0 ? '+' : ''}${decDeg.toFixed(1)}`
+      name =
+        trackingTarget?.name ??
+        `Atlas view ${raH}h${raM.toString().padStart(2, '0')}m ${decDeg >= 0 ? '+' : ''}${decDeg.toFixed(1)}`
     }
+
+    const livePanels: MosaicPanel[] = (() => {
+      if (customMosaic && customPanels.length > 0) return customPanels
+      if (framingActive && equipment && cameraFrameProfile) {
+        const iframe = iframeRef.current
+        const fov = stel.core?.fov
+        const h = iframe?.clientHeight ?? 800
+        const w = iframe?.clientWidth ?? 1200
+        const fovDeg = computeFov(equipment)
+        const vFovDeg =
+          typeof fov === 'number' && fov > 0
+            ? (fov * 180) / Math.PI
+            : Math.max(fovDeg.fovHeightDeg * mosaicV, 1)
+        const hFovDeg = vFovDeg * (w / Math.max(1, h))
+        return calculateMosaicPanels({
+          centerRaHours: raHours,
+          centerDecDeg: decDeg,
+          horizontalPanels: mosaicH,
+          verticalPanels: mosaicV,
+          horizontalOverlapPercent: mosaicOverlapH / 100,
+          verticalOverlapPercent: mosaicOverlapV / 100,
+          equipment,
+          viewportWidthPx: w,
+          viewportHeightPx: h,
+          viewportHFovDeg: hFovDeg,
+          viewportVFovDeg: vFovDeg,
+          viewportRotationDeg: 0,
+          previousRotationDeg: cameraFrameProfile.positionAngleDeg,
+        }).panels
+      }
+      return []
+    })()
+
+    const isMosaic = livePanels.length > 1
+    if (isMosaic) {
+      try {
+        sessionStorage.setItem(
+          PLAN_MOSAIC_DRAFT_KEY,
+          JSON.stringify({
+            targetName: name,
+            panels: livePanels,
+            equipmentSnapshot: equipment,
+            centerRaHours: raHours,
+            centerDecDeg: decDeg,
+          })
+        )
+      } catch {
+        /* ignore quota */
+      }
+      onSendToRemote?.({
+        target: name,
+        raHours,
+        decDeg,
+        mosaicMode: true,
+        mosaicPanels: livePanels.map((p) => ({
+          id: p.id,
+          raHours: p.raHours,
+          decDeg: p.decDeg,
+          positionAngleDeg: p.positionAngleDeg,
+          name: p.name,
+        })),
+      })
+      return
+    }
+
     onSendToRemote?.({ target: name, raHours, decDeg })
-  }, [getStel, trackingTarget, cameraFrameProfile, onSendToRemote])
+  }, [
+    getStel,
+    trackingTarget,
+    cameraFrameProfile,
+    onSendToRemote,
+    mosaicH,
+    mosaicV,
+    mosaicOverlapH,
+    mosaicOverlapV,
+    equipment,
+    planMode,
+    framingActive,
+    customMosaic,
+    customPanels,
+  ])
 
   const canSendToRemote = stelReady && (trackingTarget !== null || cameraFrameProfile !== null)
 
@@ -700,6 +911,86 @@ export function AtlasPage({ onSendToRemote }: AtlasPageProps) {
                 Send to Remote
               </button>
             </form>
+            {equipment ? (
+              <div className="pointer-events-auto mt-2 flex flex-wrap items-center gap-2">
+                <div className="inline-flex items-center gap-1 rounded-md border border-white/20 bg-black/50 px-1 py-0.5 text-xs backdrop-blur">
+                  <button
+                    type="button"
+                    onClick={() => setPlanMode('atlas')}
+                    className={
+                      'rounded px-2 py-1 ' +
+                      (planMode === 'atlas'
+                        ? 'bg-white text-black font-semibold'
+                        : 'text-white/70 hover:text-white')
+                    }
+                  >
+                    Atlas
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPlanMode('framing')}
+                    className={
+                      'rounded px-2 py-1 ' +
+                      (planMode === 'framing'
+                        ? 'bg-white text-black font-semibold'
+                        : 'text-white/70 hover:text-white')
+                    }
+                  >
+                    Framing
+                  </button>
+                </div>
+              </div>
+            ) : null}
+            {planMode === 'framing' && equipment ? (
+              <AtlasFramingToolbar
+                customMosaic={customMosaic}
+                isMosaic={framingIsMosaic}
+                horizontalPanels={mosaicH}
+                verticalPanels={mosaicV}
+                horizontalOverlapPercent={mosaicOverlapH}
+                verticalOverlapPercent={mosaicOverlapV}
+                panelCount={framingPanels.length}
+                onCustomMosaic={(v) => {
+                  setCustomMosaic(v)
+                  if (v && customPanels.length === 0 && mosaicResult.panels.length > 0) {
+                    setCustomPanels(mosaicResult.panels)
+                    setDeletePanelId(mosaicResult.panels[0]!.id)
+                  }
+                }}
+                onHorizontalPanels={setMosaicH}
+                onVerticalPanels={setMosaicV}
+                onHorizontalOverlapPercent={setMosaicOverlapH}
+                onVerticalOverlapPercent={setMosaicOverlapV}
+                onAddPanel={() => {
+                  const center = getViewCenterRaDec()
+                  if (!center || !cameraFrameProfile) return
+                  const nextId =
+                    customPanels.reduce((m, p) => Math.max(m, p.id), 0) + 1 || 1
+                  const panel: MosaicPanel = {
+                    id: nextId,
+                    raHours: center.raHours,
+                    decDeg: center.decDeg,
+                    positionAngleDeg: cameraFrameProfile.positionAngleDeg,
+                    name: `Panel ${nextId}`,
+                    screenDeltaXPx: 0,
+                    screenDeltaYPx: 0,
+                  }
+                  setCustomPanels((prev) => [...prev, panel])
+                  setDeletePanelId(nextId)
+                  setCustomMosaic(true)
+                }}
+                customPanelNames={customPanels.map((p) => ({ id: p.id, name: p.name }))}
+                deletePanelId={deletePanelId}
+                onDeletePanelIdChange={setDeletePanelId}
+                onDeletePanel={() => {
+                  setCustomPanels((prev) => {
+                    const next = prev.filter((p) => p.id !== deletePanelId)
+                    if (next[0]) setDeletePanelId(next[0].id)
+                    return next
+                  })
+                }}
+              />
+            ) : null}
             {searchError ? (
               <div className="pointer-events-auto rounded-md bg-black/50 px-2 py-1 text-xs backdrop-blur">
                 <span className="text-rose-300">{searchError}</span>
@@ -707,21 +998,13 @@ export function AtlasPage({ onSendToRemote }: AtlasPageProps) {
             ) : null}
           </div>
 
-          {/* Camera frame overlay: a non-interactive yellow rectangle anchored
-           * to viewport center. When the view is locked on a target, target
-           * is at screen center too, so the rectangle indicates exactly what
-           * the camera would capture at rotation = 0 deg. */}
+          {/* Camera / mosaic FOV overlays */}
           {cameraFrameProfile && stelReady ? (
-            <div
-              ref={cameraFrameOverlayRef}
-              aria-hidden
-              className="pointer-events-none absolute left-1/2 top-1/2 box-border border-2 border-yellow-400/90"
-              style={{
-                transform: `translate(-50%, -50%) rotate(${cameraFrameProfile.positionAngleDeg}deg)`,
-                transformOrigin: 'center center',
-                width: '1px',
-                height: '1px',
-              }}
+            <PlanFrameOverlays
+              panels={framingPanels}
+              overlayRefs={mosaicOverlayRefs}
+              showSingle={!framingUsePanelOverlays}
+              singleRef={cameraFrameOverlayRef}
             />
           ) : null}
 

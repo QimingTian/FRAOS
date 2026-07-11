@@ -1,5 +1,11 @@
 import { subtractOccupiedFromFree } from './free-intervals.js'
 import {
+  collectActiveAdminForceRunOccupancies,
+  collectActiveAdminForceRunSubSessionOccupancy,
+  isAdminForceRunActive,
+  subtractAdminForceRunsFromFree,
+} from './admin-force-run.js'
+import {
   appendAuditLog,
   getObservatoryState,
   getSessionById,
@@ -33,6 +39,10 @@ import {
   type ProjectTarget,
 } from './project-planner.js'
 import { emitAgentWakePollSequence, emitSiteSessionsChanged } from './live-bus.js'
+import {
+  getActiveProjectForAltitudeHold,
+  projectAltitudeHoldIntervals,
+} from './altitude-hold.js'
 
 type FreeInterval = { startMs: number; endMs: number }
 
@@ -52,6 +62,9 @@ function projectTarget(project: SessionRow): ProjectTarget {
     decDeg: project.decDeg,
     filterPlansTotal: project.filterPlans,
     createdAt: project.createdAt,
+    mosaicMode: project.mosaicMode,
+    mosaicPanels: project.mosaicPanels,
+    mosaicRemainingByPanel: project.mosaicRemainingByPanel,
   }
 }
 
@@ -140,6 +153,28 @@ export async function reconcilePendingScheduleStatus(): Promise<void> {
   const deadlineMs = window.nauticalDawnUtc.getTime()
   let fifoFree: FreeInterval[] = [{ startMs: Math.max(nowMs, windowStartMs), endMs: deadlineMs }]
 
+  const forceRunOccupancy = collectActiveAdminForceRunOccupancies(
+    nightKey,
+    windowStartMs,
+    deadlineMs,
+    nowMs
+  )
+  fifoFree = subtractAdminForceRunsFromFree(fifoFree, forceRunOccupancy)
+
+  const activeAltitudeHold = getActiveProjectForAltitudeHold(now)
+  const reservedIntervals = activeAltitudeHold
+    ? projectAltitudeHoldIntervals(activeAltitudeHold, now)
+    : []
+  for (const occupied of reservedIntervals) {
+    fifoFree = subtractOccupiedFromFree(fifoFree, occupied)
+  }
+
+  const forceRunSubOccupancy = collectActiveAdminForceRunSubSessionOccupancy(
+    windowStartMs,
+    deadlineMs,
+    nowMs
+  )
+
   const nextById = new Map<
     string,
     { status: 'scheduled' | 'unscheduled'; plannedStartIso: string | null; reasons: string[] }
@@ -151,6 +186,14 @@ export async function reconcilePendingScheduleStatus(): Promise<void> {
         ? weatherIntervals.reason ?? 'Unable to evaluate tonight weather.'
         : weatherIntervals.globalHardBlockReason ?? 'Tonight blocked by global weather trigger.'
     for (const r of pendingNormal) {
+      if (isAdminForceRunActive(r, nowMs) && r.status === 'scheduled' && r.plannedStartIso) {
+        nextById.set(r.id, {
+          status: 'scheduled',
+          plannedStartIso: r.plannedStartIso,
+          reasons: ['Admin force-run in progress.'],
+        })
+        continue
+      }
       nextById.set(r.id, { status: 'unscheduled', plannedStartIso: null, reasons: [reason] })
     }
     for (const p of projects) {
@@ -165,7 +208,7 @@ export async function reconcilePendingScheduleStatus(): Promise<void> {
     const combined: SessionRow[] = [...pendingNormal, ...projects]
     const orderedBySubmission = [...combined].sort((a, b) => a.createdAt.localeCompare(b.createdAt))
     const working = pendingNormal.map((p) => sessionToScheduleRow(p))
-    const projectOccupancy: ProjectSubSessionOccupancy[] = []
+    const projectOccupancy: ProjectSubSessionOccupancy[] = [...forceRunSubOccupancy]
 
     for (const r of orderedBySubmission) {
       if (projectIds.has(r.id)) {
@@ -197,6 +240,20 @@ export async function reconcilePendingScheduleStatus(): Promise<void> {
         continue
       }
 
+      if (
+        isAdminForceRunActive(r, nowMs) &&
+        r.status === 'scheduled' &&
+        r.plannedStartIso != null &&
+        Number.isFinite(Date.parse(r.plannedStartIso))
+      ) {
+        nextById.set(r.id, {
+          status: 'scheduled',
+          plannedStartIso: r.plannedStartIso,
+          reasons: ['Admin force-run in progress.'],
+        })
+        continue
+      }
+
       // Normal session: only earlier-submitted project windows block it (FIFO fairness).
       const earlierProjectOccupancy = projectOccupancy.filter((occ) => {
         const proj = orderedBySubmission.find((p) => p.id === occ.projectId)
@@ -207,6 +264,7 @@ export async function reconcilePendingScheduleStatus(): Promise<void> {
       )
       const insight = computeScheduleInsight(slice, r.id, permitted, {
         projectSubSessions: earlierProjectOccupancy,
+        reservedIntervals,
       })
       nextById.set(r.id, insight)
 
@@ -274,6 +332,8 @@ export function startBackgroundReconcileLoop(intervalMs = 90_000): () => void {
         if (isEmergencyStopBlocking()) return
         if (getObservatoryState().ninaRunning) return
         await reconcilePendingScheduleStatus()
+        const { triggerWeatherSafetyEmergencyStopCheck } = await import('./weather-safety-estop.js')
+        triggerWeatherSafetyEmergencyStopCheck()
       } catch (ex) {
         console.error('[hub] background reconcile failed:', ex)
       }

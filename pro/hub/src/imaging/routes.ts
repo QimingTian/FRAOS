@@ -98,6 +98,37 @@ function parseQueueBody(body: Record<string, unknown>) {
     observatoryLat: typeof body.observatoryLat === 'number' ? body.observatoryLat : null,
     observatoryLon: typeof body.observatoryLon === 'number' ? body.observatoryLon : null,
     observatoryElevationM: typeof body.observatoryElevationM === 'number' ? body.observatoryElevationM : null,
+    mosaicMode: body.mosaicMode === true,
+    mosaicPanels: Array.isArray(body.mosaicPanels)
+      ? body.mosaicPanels
+          .map((p) => {
+            if (!p || typeof p !== 'object') return null
+            const rec = p as Record<string, unknown>
+            const id = Number(rec.id)
+            const raHours = Number(rec.raHours)
+            const decDeg = Number(rec.decDeg)
+            const positionAngleDeg = Number(rec.positionAngleDeg)
+            if (![id, raHours, decDeg, positionAngleDeg].every((x) => Number.isFinite(x))) return null
+            return {
+              id,
+              raHours,
+              decDeg,
+              positionAngleDeg,
+              name: typeof rec.name === 'string' ? rec.name : `Panel ${id}`,
+            }
+          })
+          .filter(
+            (
+              p
+            ): p is {
+              id: number
+              raHours: number
+              decDeg: number
+              positionAngleDeg: number
+              name: string
+            } => p != null
+          )
+      : undefined,
   }
 }
 
@@ -175,8 +206,12 @@ export function mountImagingRoutes(
       res.status(400).json({ ok: false, error: 'target is required' })
       return
     }
-    const session = await createQueueSession(body, uuidv4(), resolveTenantId(req, options?.tenantId))
-    res.status(201).json({ ok: true, request: sessionToPublic(session) })
+    try {
+      const session = await createQueueSession(body, uuidv4(), resolveTenantId(req, options?.tenantId))
+      res.status(201).json({ ok: true, request: sessionToPublic(session) })
+    } catch (e) {
+      res.status(400).json({ ok: false, error: e instanceof Error ? e.message : 'Create failed' })
+    }
   })
 
   app.delete('/imaging/sessions/:sessionId', (req, res) => {
@@ -198,12 +233,94 @@ export function mountImagingRoutes(
     if (!auth(req, res)) return
     const ninaRunning = Boolean((req.body as { ninaRunning?: unknown })?.ninaRunning)
     touchAgentPulse(ninaRunning)
+    // Night weather-safety (ASC rain / 20 km thunder); daytime no-ops inside the check.
+    void import('./weather-safety-estop.js').then((m) => m.triggerWeatherSafetyEmergencyStopCheck())
     res.json({ ok: true })
   })
 
   app.get('/imaging/reconcile-queue-schedule', async (req, res) => {
     if (!auth(req, res)) return
     await reconcilePendingScheduleStatus()
+    void import('./weather-safety-estop.js').then((m) => m.triggerWeatherSafetyEmergencyStopCheck())
+    res.json({ ok: true })
+  })
+
+  app.get('/weather/storm-approach', async (_req, res) => {
+    try {
+      const { evaluateStormApproachStatus, STORM_APPROACH_RADIUS_KM } = await import(
+        './weather-safety-estop.js'
+      )
+      const status = await evaluateStormApproachStatus()
+      if (!status) {
+        res.status(502).json({
+          error: 'Storm approach forecast unavailable',
+          radiusKm: STORM_APPROACH_RADIUS_KM,
+        })
+        return
+      }
+      res.json({
+        safe: status.safe,
+        radiusKm: status.radiusKm,
+        threat: status.threat
+          ? { reason: status.threat.reason, detail: status.threat.detail }
+          : null,
+      })
+    } catch (e) {
+      res.status(502).json({
+        error: e instanceof Error ? e.message : 'Storm approach check failed',
+      })
+    }
+  })
+
+  app.get('/imaging/schedule-control', (_req, res) => {
+    void import('../admin-closed-window-store.js').then(({ listAdminClosedWindows }) => {
+      res.json({ ok: true, windows: listAdminClosedWindows() })
+    })
+  })
+
+  app.post('/imaging/schedule-control', async (req, res) => {
+    const { addAdminClosedWindow } = await import('../admin-closed-window-store.js')
+    const body = (req.body ?? {}) as Record<string, unknown>
+    const startIso = typeof body.startIso === 'string' ? body.startIso : ''
+    const endIso = typeof body.endIso === 'string' ? body.endIso : ''
+    const description = typeof body.description === 'string' ? body.description : ''
+    const created = addAdminClosedWindow(startIso, endIso, description)
+    if ('error' in created) {
+      res.status(400).json({ ok: false, error: created.error })
+      return
+    }
+    await reconcilePendingScheduleStatus()
+    appendAuditLog({
+      kind: 'schedule_control.add',
+      message: `Admin scheduled closed window ${created.startIso} -> ${created.endIso}`,
+      detail: {
+        id: created.id,
+        startIso: created.startIso,
+        endIso: created.endIso,
+        description: created.description ?? null,
+      },
+    })
+    res.json({ ok: true, window: created })
+  })
+
+  app.delete('/imaging/schedule-control', async (req, res) => {
+    const { removeAdminClosedWindow } = await import('../admin-closed-window-store.js')
+    const id = typeof req.query.id === 'string' ? req.query.id : ''
+    if (!id) {
+      res.status(400).json({ ok: false, error: 'id is required' })
+      return
+    }
+    const ok = removeAdminClosedWindow(id)
+    if (!ok) {
+      res.status(404).json({ ok: false, error: 'Not found' })
+      return
+    }
+    await reconcilePendingScheduleStatus()
+    appendAuditLog({
+      kind: 'schedule_control.remove',
+      message: `Admin removed closed window ${id}`,
+      detail: { id },
+    })
     res.json({ ok: true })
   })
 
@@ -478,7 +595,7 @@ export function mountImagingRoutes(
     res.json({ ok: true, queueId })
   })
 
-  app.post('/imaging/session-control', (req, res) => {
+  app.post('/imaging/session-control', async (req, res) => {
     const body = req.body as Record<string, unknown>
     const action = typeof body.action === 'string' ? body.action.trim() : ''
     const sessionId = typeof body.sessionId === 'string' ? body.sessionId.trim() : ''
@@ -502,7 +619,9 @@ export function mountImagingRoutes(
       })
       return
     }
-    const result = applySessionControlAction(sessionId, action as SessionControlAction)
+    const result = await Promise.resolve(
+      applySessionControlAction(sessionId, action as SessionControlAction)
+    )
     if ('error' in result) {
       res.status(400).json({ ok: false, error: result.error })
       return

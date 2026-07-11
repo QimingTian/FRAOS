@@ -1,3 +1,4 @@
+import { adminRunSession } from './admin-force-run.js'
 import {
   appendAuditLog,
   deleteSessionById,
@@ -19,7 +20,6 @@ import {
 import { publishProgress } from './progress-live.js'
 import { removePreviewImage } from './preview-store.js'
 import { reconcilePendingScheduleStatus } from './reconcile.js'
-import { emitAgentWakePollSequence } from './live-bus.js'
 
 export type SessionControlAction =
   | 'run'
@@ -127,60 +127,22 @@ function releaseQueueSessionHold(sessionId: string): { ok: true } | { error: str
   return { ok: true }
 }
 
-function adminRunSession(sessionId: string): { ok: true } | { error: string } {
+async function runAdminForceRun(sessionId: string): Promise<{ ok: true } | { error: string }> {
   if (isEmergencyStopBlocking()) {
     return { error: 'Emergency STOP active; Run is disabled.' }
   }
-
   const night = getProjectNightById(sessionId)
-  if (night) {
-    if (!NIGHT_HOLDABLE.has(night.status) && night.status !== 'on_hold') {
-      return { error: `Cannot run sub-session in status "${night.status}".` }
-    }
-    if (night.status === 'on_hold') {
-      const released = releaseProjectNightHold(sessionId)
+  if (night?.status === 'on_hold') {
+    const released = releaseProjectNightHold(sessionId)
+    if ('error' in released) return released
+  } else {
+    const session = getSessionById(sessionId)
+    if (session?.status === 'on_hold') {
+      const released = releaseQueueSessionHold(sessionId)
       if ('error' in released) return released
     }
-    const now = new Date().toISOString()
-    getDb()
-      .prepare(`UPDATE project_nights SET status = 'scheduled', planned_start_iso = ?, updated_at = ? WHERE id = ?`)
-      .run(now, now, sessionId)
-    appendAuditLog({
-      kind: 'queue.admin_run',
-      message: `Admin force run: project sub-session ${sessionId}.`,
-      detail: { sessionId },
-    })
-    emitAgentWakePollSequence()
-    void reconcilePendingScheduleStatus()
-    return { ok: true }
   }
-
-  const session = getSessionById(sessionId)
-  if (!session) return { error: 'Session not found' }
-  if (session.projectMode) {
-    return { error: 'Use the project sub-session id (Session N), not the project queue id.' }
-  }
-  if (!['pending', 'scheduled', 'on_hold'].includes(session.status)) {
-    return { error: `Cannot run session in status "${session.status}".` }
-  }
-  if (session.status === 'on_hold') {
-    const released = releaseQueueSessionHold(sessionId)
-    if ('error' in released) return released
-  }
-  const now = new Date().toISOString()
-  getDb()
-    .prepare(
-      `UPDATE sessions SET status = 'scheduled', planned_start_iso = ?, schedule_reasons_json = ?, updated_at = ? WHERE id = ?`
-    )
-    .run(now, JSON.stringify(['Admin force run']), now, sessionId)
-  appendAuditLog({
-    kind: 'queue.admin_run',
-    message: `Admin force run: ${session.target} (${sessionId}).`,
-    detail: { sessionId },
-  })
-  emitAgentWakePollSequence()
-  void reconcilePendingScheduleStatus()
-  return { ok: true }
+  return adminRunSession(sessionId)
 }
 
 function adminMarkComplete(sessionId: string): { ok: true } | { error: string } {
@@ -313,13 +275,13 @@ function adminDeleteSession(sessionId: string): { ok: true } | { error: string }
 export function applySessionControlAction(
   sessionId: string,
   action: SessionControlAction
-): { ok: true } | { error: string } {
+): { ok: true } | { error: string } | Promise<{ ok: true } | { error: string }> {
   const id = sessionId.trim()
   if (!id) return { error: 'sessionId is required' }
 
   switch (action) {
     case 'run':
-      return adminRunSession(id)
+      return runAdminForceRun(id)
     case 'hold':
       return getProjectNightById(id) ? holdProjectNight(id) : holdQueueSession(id)
     case 'release_hold':

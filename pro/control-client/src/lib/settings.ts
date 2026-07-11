@@ -90,3 +90,24 @@ export function validateObservatoryInput(input: {
     },
   }
 }
+
+const ASC_STREAM_KEY = 'ascStreamUrl'
+
+export function getAscStreamUrl(): string {
+  try {
+    const raw = localStorage.getItem(ASC_STREAM_KEY)?.trim()
+    if (raw) return raw
+  } catch {
+    /* ignore */
+  }
+  return (import.meta.env.VITE_ASC_STREAM_URL as string | undefined)?.trim() ?? ''
+}
+
+export function setAscStreamUrl(url: string): void {
+  const trimmed = url.trim()
+  if (!trimmed) {
+    localStorage.removeItem(ASC_STREAM_KEY)
+    return
+  }
+  localStorage.setItem(ASC_STREAM_KEY, trimmed)
+}

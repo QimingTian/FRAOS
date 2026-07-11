@@ -7,9 +7,11 @@ import {
   planSessionSchedule,
   sessionRowsToScheduleStripItems,
   sessionScheduleBlocksWithTail,
+  type AdminClosedWindow,
 } from '../../lib/site/tonight-schedule'
 import type { SessionRow } from '../../lib/types'
 import type { TonightWeatherSnapshot } from '../../lib/weather-client'
+import { fetchAdminClosedWindows } from '../../lib/hub-client'
 
 type TonightScheduleTimelineProps = {
   weather: TonightWeatherSnapshot | null
@@ -26,10 +28,33 @@ export function TonightScheduleTimeline({ weather, sessions }: TonightScheduleTi
   const [lockedSessionSchedule, setLockedSessionSchedule] = useState<
     Record<string, { startMs: number; endMs: number }>
   >({})
+  const [adminClosedWindows, setAdminClosedWindows] = useState<AdminClosedWindow[]>([])
 
   useEffect(() => {
     const id = window.setInterval(() => setScheduleNowMs(Date.now()), 60_000)
     return () => window.clearInterval(id)
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    const load = async () => {
+      const res = await fetchAdminClosedWindows()
+      if (cancelled || !res.ok || !Array.isArray(res.windows)) return
+      setAdminClosedWindows(
+        res.windows.map((w) => ({
+          id: w.id,
+          startIso: w.startIso,
+          endIso: w.endIso,
+          description: w.description,
+        }))
+      )
+    }
+    void load()
+    const id = window.setInterval(() => void load(), 60_000)
+    return () => {
+      cancelled = true
+      window.clearInterval(id)
+    }
   }, [])
 
   useEffect(() => {
@@ -44,8 +69,8 @@ export function TonightScheduleTimeline({ weather, sessions }: TonightScheduleTi
   }, [weather])
 
   const tonightSchedule = useMemo(
-    () => buildTonightScheduleLayout(scheduleNowMs, []),
-    [scheduleNowMs]
+    () => buildTonightScheduleLayout(scheduleNowMs, adminClosedWindows),
+    [scheduleNowMs, adminClosedWindows]
   )
 
   const tonightNightKey = useMemo(
@@ -86,7 +111,7 @@ export function TonightScheduleTimeline({ weather, sessions }: TonightScheduleTi
         readyWeatherHourKeys,
         tonightWeatherPrediction: weather?.prediction ?? 'not_permitted',
         hasAnyPrecipitationTonight: weather?.hasAnyPrecipitationTonight === true,
-        adminClosedWindows: [],
+        adminClosedWindows,
         nowMs: scheduleNowMs,
       }),
     [
@@ -97,6 +122,7 @@ export function TonightScheduleTimeline({ weather, sessions }: TonightScheduleTi
       readyWeatherHourKeys,
       weather?.prediction,
       weather?.hasAnyPrecipitationTonight,
+      adminClosedWindows,
       scheduleNowMs,
     ]
   )

@@ -19,6 +19,7 @@ import { submitImagingSession, updateImagingSession } from '../../../lib/imaging
 import { fetchStorageQuota } from '../../../lib/hub-client'
 import type { SessionRow } from '../../../lib/types'
 import { contentApiPath } from '../../../lib/content-base'
+import { PLAN_MOSAIC_DRAFT_KEY } from '../../../lib/mosaic/framing-rectangle'
 import type { WeatherPrediction } from '../../../lib/weather-client'
 import {
   MIN_ALTITUDE_DEG,
@@ -104,6 +105,10 @@ export function useNewImagingSessionForm({
   const [decSecondPart, setDecSecondPart] = useState('')
   const [sessionPassword, setSessionPassword] = useState('')
   const [outputMode, setOutputMode] = useState<'raw_zip' | 'none'>('raw_zip')
+  const [mosaicMode, setMosaicMode] = useState(false)
+  const [mosaicPanels, setMosaicPanels] = useState<
+    Array<{ id: number; raHours: number; decDeg: number; positionAngleDeg: number; name: string }>
+  >([])
   const [storageOverQuota, setStorageOverQuota] = useState(false)
   const [cameraCoolingTempC, setCameraCoolingTempC] = useState<-10 | 0>(-10)
   const [filterPlans, setFilterPlans] = useState<FilterPlanInput[]>([])
@@ -170,8 +175,56 @@ const VARIABLE_STAR_FILTER_VALUES: VariableStarFilterUi[] = [
         setDecSecondPart
       )
     }
+    if (prefill.mosaicMode && Array.isArray(prefill.mosaicPanels) && prefill.mosaicPanels.length > 0) {
+      setMosaicMode(true)
+      setMosaicPanels(prefill.mosaicPanels)
+      setProjectMode(true)
+    } else {
+      setMosaicMode(false)
+      setMosaicPanels([])
+    }
     onPrefillConsumed?.()
   }, [prefill, editingSessionId, onPrefillConsumed])
+
+  useEffect(() => {
+    if (prefill || editingSessionId) return
+    try {
+      const raw = sessionStorage.getItem(PLAN_MOSAIC_DRAFT_KEY)
+      if (!raw) return
+      const draft = JSON.parse(raw) as {
+        targetName?: string
+        panels?: Array<{
+          id: number
+          raHours: number
+          decDeg: number
+          positionAngleDeg: number
+          name: string
+        }>
+        centerRaHours?: number
+        centerDecDeg?: number
+      }
+      if (!draft?.panels?.length) return
+      setMosaicMode(true)
+      setProjectMode(true)
+      setMosaicPanels(draft.panels)
+      if (draft.targetName) setRequestName(draft.targetName)
+      const center = draft.panels[0]!
+      applySexagesimalPartsFromRadec(
+        center.raHours,
+        center.decDeg,
+        setRaHourPart,
+        setRaMinutePart,
+        setRaSecondPart,
+        setDecSign,
+        setDecDegreePart,
+        setDecMinutePart,
+        setDecSecondPart
+      )
+      sessionStorage.removeItem(PLAN_MOSAIC_DRAFT_KEY)
+    } catch {
+      /* ignore */
+    }
+  }, [prefill, editingSessionId])
 
   useEffect(() => {
     if (!editingSession) return
@@ -218,6 +271,7 @@ const VARIABLE_STAR_FILTER_VALUES: VariableStarFilterUi[] = [
     } else {
       setVariableStarBlockHours(1)
     }
+    // Legacy stacked_master coerces to raw_zip
     const output = item.outputMode === 'none' ? 'none' : 'raw_zip'
     setOutputMode(output)
     if (item.cameraCoolingTempC === 0 || item.cameraCoolingTempC === -10) {
@@ -700,8 +754,7 @@ const VARIABLE_STAR_FILTER_VALUES: VariableStarFilterUi[] = [
     setDecMinutePart(form.decMinutePart)
     setDecSecondPart(form.decSecondPart)
     setSessionPassword(form.sessionPassword)
-    // Legacy saved sessions may have outputMode `stacked_master` (discontinued).
-    setOutputMode(form.outputMode === 'stacked_master' ? 'raw_zip' : form.outputMode)
+    setOutputMode(form.outputMode)
     if (form.cameraCoolingTempC === 0 || form.cameraCoolingTempC === -10) {
       setCameraCoolingTempC(form.cameraCoolingTempC)
     }
@@ -785,7 +838,7 @@ const VARIABLE_STAR_FILTER_VALUES: VariableStarFilterUi[] = [
       whenClosedBehavior,
       outputMode,
       cameraCoolingTempC,
-      projectMode: sessionType === 'dso' ? projectMode : false,
+      projectMode: sessionType === 'dso' ? projectMode || mosaicMode : false,
       sessionPassword: sessionPassword.trim() || undefined,
       raHours: coords.raHours,
       decDeg: coords.decDeg,
@@ -793,6 +846,8 @@ const VARIABLE_STAR_FILTER_VALUES: VariableStarFilterUi[] = [
       catalogQuery,
       variableStarBlockHours: sessionType === 'variable_star' ? variableStarBlockHours : undefined,
       filterPlans: normalizedPlans,
+      mosaicMode: sessionType === 'dso' && mosaicMode,
+      mosaicPanels: sessionType === 'dso' && mosaicMode && mosaicPanels.length > 0 ? mosaicPanels : undefined,
     }
 
     const result = editingSessionId
@@ -821,6 +876,8 @@ const VARIABLE_STAR_FILTER_VALUES: VariableStarFilterUi[] = [
     requestName,
     cameraCoolingTempC,
     projectMode,
+    mosaicMode,
+    mosaicPanels,
     sessionPassword,
     catalogQuery,
     editingSessionId,
@@ -1007,6 +1064,10 @@ const VARIABLE_STAR_FILTER_VALUES: VariableStarFilterUi[] = [
     setSessionPassword,
     outputMode,
     setOutputMode,
+    mosaicMode,
+    setMosaicMode,
+    mosaicPanels,
+    setMosaicPanels,
     storageOverQuota,
     cameraCoolingTempC,
     setCameraCoolingTempC,

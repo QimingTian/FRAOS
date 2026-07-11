@@ -27,6 +27,8 @@ import { SettingsActivityLogPanel } from '../components/settings/SettingsActivit
 import { SettingsLicensePanel } from '../components/settings/SettingsLicensePanel'
 import { SettingsStoragePanel } from '../components/settings/SettingsStoragePanel'
 import { SettingsTeamPanel } from '../components/settings/SettingsTeamPanel'
+import { SettingsClosedWindowsPanel } from '../components/settings/SettingsClosedWindowsPanel'
+import { getAscStreamUrl, setAscStreamUrl } from '../lib/settings'
 
 export function SettingsPage() {
   const observatory = useObservatoryLocation()
@@ -53,6 +55,8 @@ export function SettingsPage() {
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [logRefreshToken, setLogRefreshToken] = useState(0)
+  const [ascStreamUrl, setAscStreamUrlState] = useState('')
+  const [ascMessage, setAscMessage] = useState<string | null>(null)
 
   const refresh = useCallback(async () => {
     const [t, v, u] = await Promise.all([
@@ -67,6 +71,7 @@ export function SettingsPage() {
 
   useEffect(() => {
     void refresh()
+    setAscStreamUrlState(getAscStreamUrl())
   }, [refresh])
 
   useEffect(() => {
@@ -443,6 +448,37 @@ export function SettingsPage() {
         />
 
         <SettingsStoragePanel />
+
+        <SettingsClosedWindowsPanel />
+
+        <section className="remote-glass-pane settings-pane">
+          <div className="remote-pane-head">
+            <h2>All-sky camera</h2>
+          </div>
+          <form
+            className="mt-2 space-y-3"
+            onSubmit={(e) => {
+              e.preventDefault()
+              setAscStreamUrl(ascStreamUrl)
+              setAscMessage('ASC stream URL saved.')
+            }}
+          >
+            <label className="block text-sm text-white/70">
+              Stream URL (ascStreamUrl)
+              <input
+                type="url"
+                value={ascStreamUrl}
+                onChange={(e) => setAscStreamUrlState(e.target.value)}
+                placeholder="https://cam.example.com/stream"
+                className="mt-1 w-full rounded-lg border border-white/15 bg-black/30 px-3 py-2 text-white"
+              />
+            </label>
+            <button type="submit" className="btn">
+              Save ASC URL
+            </button>
+          </form>
+          {ascMessage ? <p className="mt-3 text-sm text-green-400">{ascMessage}</p> : null}
+        </section>
 
         <SettingsTeamPanel />
       </div>

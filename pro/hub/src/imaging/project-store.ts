@@ -24,6 +24,8 @@ export type ProjectNight = {
   status: ProjectNightStatus
   filterPlansTonight: FilterPlan[]
   plannedStartIso: string | null
+  /** Admin force-run: do not unschedule until this instant (ISO). */
+  adminForceRunUntilIso: string | null
   ninaSequenceJson: string | null
   ninaDeliveredAt: string | null
   completedAt: string | null
@@ -39,6 +41,8 @@ function rowToNight(row: Record<string, unknown>): ProjectNight {
     status: row.status as ProjectNightStatus,
     filterPlansTonight: parsePlans(row.filter_plans_json),
     plannedStartIso: row.planned_start_iso != null ? String(row.planned_start_iso) : null,
+    adminForceRunUntilIso:
+      row.admin_force_run_until_iso != null ? String(row.admin_force_run_until_iso) : null,
     ninaSequenceJson: row.nina_sequence_json != null ? String(row.nina_sequence_json) : null,
     ninaDeliveredAt: row.nina_delivered_at != null ? String(row.nina_delivered_at) : null,
     completedAt: row.completed_at != null ? String(row.completed_at) : null,
@@ -126,14 +130,19 @@ export function upsertProjectNight(input: {
   filterPlansTonight: FilterPlan[]
   plannedStartIso: string | null
   ninaSequenceJson: string | null
+  adminForceRunUntilIso?: string | null
 }): void {
   const now = new Date().toISOString()
   const existing = getProjectNightById(input.id)
+  const forceUntil =
+    input.adminForceRunUntilIso !== undefined
+      ? input.adminForceRunUntilIso
+      : (existing?.adminForceRunUntilIso ?? null)
   if (existing) {
     getDb()
       .prepare(
         `UPDATE project_nights SET night_key = ?, night_index = ?, status = ?, filter_plans_json = ?,
-          planned_start_iso = ?, nina_sequence_json = ?, updated_at = ? WHERE id = ?`
+          planned_start_iso = ?, nina_sequence_json = ?, admin_force_run_until_iso = ?, updated_at = ? WHERE id = ?`
       )
       .run(
         input.nightKey,
@@ -142,6 +151,7 @@ export function upsertProjectNight(input: {
         JSON.stringify(input.filterPlansTonight),
         input.plannedStartIso,
         input.ninaSequenceJson,
+        forceUntil,
         now,
         input.id
       )
@@ -151,9 +161,9 @@ export function upsertProjectNight(input: {
     .prepare(
       `INSERT INTO project_nights (
         id, project_id, night_key, night_index, status, filter_plans_json,
-        planned_start_iso, nina_sequence_json, nina_delivered_at, completed_at, failed_at,
-        created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, NULL, ?, ?)`
+        planned_start_iso, nina_sequence_json, admin_force_run_until_iso,
+        nina_delivered_at, completed_at, failed_at, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL, NULL, ?, ?)`
     )
     .run(
       input.id,
@@ -164,12 +174,43 @@ export function upsertProjectNight(input: {
       JSON.stringify(input.filterPlansTonight),
       input.plannedStartIso,
       input.ninaSequenceJson,
+      forceUntil,
       now,
       now
     )
 }
 
-/** Replace tonight's `scheduled` sub-sessions for a project's night (keeps in_progress/completed/failed). */
+/** Patch a project night for admin force-run. */
+export function patchProjectNightAdminForceRun(
+  nightId: string,
+  input: {
+    nightKey: string
+    plannedStartIso: string
+    adminForceRunUntilIso: string
+    ninaSequenceJson: string | null
+  }
+): ProjectNight | null {
+  const night = getProjectNightById(nightId)
+  if (!night) return null
+  const now = new Date().toISOString()
+  getDb()
+    .prepare(
+      `UPDATE project_nights SET status = 'scheduled', night_key = ?, planned_start_iso = ?,
+        admin_force_run_until_iso = ?, nina_sequence_json = COALESCE(?, nina_sequence_json), updated_at = ?
+       WHERE id = ?`
+    )
+    .run(
+      input.nightKey,
+      input.plannedStartIso,
+      input.adminForceRunUntilIso,
+      input.ninaSequenceJson,
+      now,
+      nightId
+    )
+  return getProjectNightById(nightId)
+}
+
+/** Replace tonight's `scheduled` sub-sessions for a project's night (keeps in_progress/completed/failed + active force-runs). */
 export function replaceScheduledNights(
   projectId: string,
   nightKey: string,
@@ -182,10 +223,26 @@ export function replaceScheduledNights(
   }>
 ): void {
   const db = getDb()
-  db.prepare(
-    `DELETE FROM project_nights WHERE project_id = ? AND night_key = ? AND status = 'scheduled'`
-  ).run(projectId, nightKey)
+  const nowMs = Date.now()
+  const existing = listProjectNights(projectId).filter(
+    (n) => n.nightKey === nightKey && n.status === 'scheduled'
+  )
+  const forceRunIds = new Set(
+    existing
+      .filter(
+        (n) =>
+          n.adminForceRunUntilIso != null &&
+          Number.isFinite(Date.parse(n.adminForceRunUntilIso)) &&
+          Date.parse(n.adminForceRunUntilIso) > nowMs
+      )
+      .map((n) => n.id)
+  )
+  for (const n of existing) {
+    if (forceRunIds.has(n.id)) continue
+    db.prepare(`DELETE FROM project_nights WHERE id = ?`).run(n.id)
+  }
   for (const sub of subs) {
+    if (forceRunIds.has(sub.id)) continue
     upsertProjectNight({
       id: sub.id,
       projectId,

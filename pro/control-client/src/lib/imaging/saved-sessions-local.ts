@@ -11,8 +11,7 @@ export type RemoteSavedSessionFormV1 = {
   decMinutePart: string
   decSecondPart: string
   sessionPassword: string
-  /** Legacy sessions may still carry `stacked_master` in stored JSON. */
-  outputMode: 'raw_zip' | 'stacked_master' | 'none'
+  outputMode: 'raw_zip' | 'none'
   cameraCoolingTempC?: -10 | 0
   filterPlans: Array<{ filterName: string; count: string; exposureSeconds: string }>
   variableStarBlockHours: number
@@ -32,13 +31,29 @@ export type SavedSessionEntry = {
 
 const STORAGE_KEY = 'borean-remote-saved-sessions'
 
+/** Coerce legacy stacked_master → raw_zip when loading stored sessions. */
+function normalizeOutputMode(raw: unknown): 'raw_zip' | 'none' {
+  if (raw === 'none') return 'none'
+  return 'raw_zip'
+}
+
+function normalizeSavedEntry(entry: SavedSessionEntry): SavedSessionEntry {
+  return {
+    ...entry,
+    form: {
+      ...entry.form,
+      outputMode: normalizeOutputMode(entry.form?.outputMode),
+    },
+  }
+}
+
 function readAll(): SavedSessionEntry[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return []
     const parsed = JSON.parse(raw) as unknown
     if (!Array.isArray(parsed)) return []
-    return parsed as SavedSessionEntry[]
+    return (parsed as SavedSessionEntry[]).map(normalizeSavedEntry)
   } catch {
     return []
   }

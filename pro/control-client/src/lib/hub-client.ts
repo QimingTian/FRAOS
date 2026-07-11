@@ -56,6 +56,28 @@ export async function fetchObservatoryStatus(): Promise<ObservatoryStatusRespons
   return hubFetch<ObservatoryStatusResponse>('/imaging/observatory-status')
 }
 
+export type StormApproachResponse = {
+  safe?: boolean
+  radiusKm?: number
+  threat?: { reason?: string; detail?: Record<string, unknown> } | null
+  error?: string
+}
+
+/** Hub `/weather/storm-approach`, with website `/api/weather/storm-approach` fallback. */
+export async function fetchStormApproach(): Promise<StormApproachResponse> {
+  try {
+    return await hubFetch<StormApproachResponse>('/weather/storm-approach')
+  } catch {
+    try {
+      const { contentApiPath } = await import('./content-base')
+      const res = await fetch(contentApiPath('/api/weather/storm-approach'), { cache: 'no-store' })
+      return (await res.json().catch(() => ({}))) as StormApproachResponse
+    } catch {
+      return { error: 'Storm approach unavailable' }
+    }
+  }
+}
+
 export async function fetchCurrentSessions(): Promise<CurrentSessionsResponse> {
   return hubFetch<CurrentSessionsResponse>('/imaging/current-sessions')
 }
@@ -306,6 +328,84 @@ export async function removeProTeamMember(
 
 export async function fetchAuditLog(limit = 200): Promise<AuditLogResponse> {
   return hubFetch<AuditLogResponse>(`/imaging/audit-log?limit=${encodeURIComponent(String(limit))}`)
+}
+
+export type AdminClosedWindowRow = {
+  id: string
+  startIso: string
+  endIso: string
+  description?: string
+  createdAtIso?: string
+}
+
+export async function fetchAdminClosedWindows(): Promise<{
+  ok: boolean
+  windows?: AdminClosedWindowRow[]
+  error?: string
+}> {
+  try {
+    return await hubFetch<{ ok: boolean; windows?: AdminClosedWindowRow[]; error?: string }>(
+      '/imaging/schedule-control'
+    )
+  } catch (ex) {
+    return { ok: false, error: ex instanceof Error ? ex.message : 'Failed to load closed windows' }
+  }
+}
+
+export async function addAdminClosedWindow(input: {
+  startIso: string
+  endIso: string
+  description: string
+}): Promise<{ ok: boolean; window?: AdminClosedWindowRow; error?: string }> {
+  const tenant = await loadRuntimeTenant()
+  const url = personalTenantApiUrl(tenant, '/imaging/schedule-control')
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: personalAuthHeaders(tenant, { 'Content-Type': 'application/json' }),
+      body: JSON.stringify(input),
+    })
+    const data = (await res.json().catch(() => ({}))) as {
+      ok?: boolean
+      window?: AdminClosedWindowRow
+      error?: string
+    }
+    if (!res.ok || !data.ok) {
+      return { ok: false, error: typeof data.error === 'string' ? data.error : `HTTP ${res.status}` }
+    }
+    return { ok: true, window: data.window }
+  } catch (ex) {
+    return {
+      ok: false,
+      error: ex instanceof Error ? formatHubError(ex.message, tenant) : 'Failed to add closed window',
+    }
+  }
+}
+
+export async function removeAdminClosedWindow(
+  id: string
+): Promise<{ ok: boolean; error?: string }> {
+  const tenant = await loadRuntimeTenant()
+  const url = personalTenantApiUrl(
+    tenant,
+    `/imaging/schedule-control?id=${encodeURIComponent(id)}`
+  )
+  try {
+    const res = await fetch(url, {
+      method: 'DELETE',
+      headers: personalAuthHeaders(tenant),
+    })
+    const data = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string }
+    if (!res.ok || !data.ok) {
+      return { ok: false, error: typeof data.error === 'string' ? data.error : `HTTP ${res.status}` }
+    }
+    return { ok: true }
+  } catch (ex) {
+    return {
+      ok: false,
+      error: ex instanceof Error ? formatHubError(ex.message, tenant) : 'Failed to remove closed window',
+    }
+  }
 }
 
 export type SessionProgressResponse = {

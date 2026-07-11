@@ -75,6 +75,9 @@ export function insertSession(input: {
   variableStarBlockHours?: number | null
   catalogQuery?: string | null
   ninaSequenceJson?: string | null
+  mosaicMode?: boolean
+  mosaicPanels?: SessionRow['mosaicPanels']
+  mosaicRemainingByPanel?: SessionRow['mosaicRemainingByPanel']
 }): SessionRow {
   const now = new Date().toISOString()
   const sessionType = input.sessionType ?? 'dso'
@@ -93,6 +96,7 @@ export function insertSession(input: {
     createdAt: now,
     updatedAt: now,
     plannedStartIso: null,
+    adminForceRunUntilIso: null,
     scheduleReasons: [],
     raHours: input.raHours ?? null,
     decDeg: input.decDeg ?? null,
@@ -105,6 +109,9 @@ export function insertSession(input: {
     catalogQuery: input.catalogQuery ?? null,
     ninaSequenceJson: input.ninaSequenceJson ?? null,
     remainingByFilter: null,
+    mosaicMode: Boolean(input.mosaicMode),
+    mosaicPanels: input.mosaicPanels ?? null,
+    mosaicRemainingByPanel: input.mosaicRemainingByPanel ?? null,
   }
   getImagingState().sessions.push(session)
   return session
@@ -119,6 +126,19 @@ export function patchSessionSchedule(
     status,
     plannedStartIso: insight.plannedStartIso,
     scheduleReasons: insight.reasons,
+  })
+}
+
+/** Schedule a normal queue row for admin force-run. */
+export function patchSessionAdminForceRun(
+  id: string,
+  input: { plannedStartIso: string; adminForceRunUntilIso: string }
+): SessionRow | null {
+  return updateSession(id, {
+    status: 'scheduled',
+    plannedStartIso: input.plannedStartIso,
+    adminForceRunUntilIso: input.adminForceRunUntilIso,
+    scheduleReasons: ['Admin force-run scheduled.'],
   })
 }
 

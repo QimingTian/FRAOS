@@ -16,7 +16,7 @@ export interface NinaSequenceParams {
   exposureCount: number
   /** Echoed into JSON for NINA HTTP POST `queueId` (ignored by NINA if unused). */
   boreanQueueId?: string
-  outputMode?: 'raw_zip' | 'none' // | 'stacked_master' — discontinued
+  outputMode?: 'raw_zip' | 'none'
   filterPlans?: Array<{
     filterName: string
     exposureSeconds: number

@@ -19,6 +19,14 @@ export type FilterRemaining = {
   countRemaining: number
 }
 
+export type MosaicPanel = {
+  id: number
+  raHours: number
+  decDeg: number
+  positionAngleDeg: number
+  name: string
+}
+
 export type SessionRow = {
   id: string
   target: string
@@ -36,6 +44,8 @@ export type SessionRow = {
   createdAt: string
   updatedAt: string
   plannedStartIso: string | null
+  /** Admin force-run: do not unschedule until this instant (ISO). */
+  adminForceRunUntilIso?: string | null
   scheduleReasons: string[]
   raHours: number | null
   decDeg: number | null
@@ -48,6 +58,9 @@ export type SessionRow = {
   catalogQuery: string | null
   ninaSequenceJson: string | null
   remainingByFilter: FilterRemaining[] | null
+  mosaicMode?: boolean
+  mosaicPanels?: MosaicPanel[] | null
+  mosaicRemainingByPanel?: FilterRemaining[][] | null
 }
 
 export type ObservatoryMode = 'manual' | 'auto'
@@ -78,6 +91,8 @@ export type ProjectNight = {
   onHoldFromStatus?: 'planned' | 'scheduled' | null
   filterPlansTonight: FilterPlan[]
   plannedStartIso: string | null
+  /** Admin force-run: do not unschedule until this instant (ISO). */
+  adminForceRunUntilIso?: string | null
   ninaSequenceJson: string | null
   ninaDeliveredAt: string | null
   completedAt: string | null

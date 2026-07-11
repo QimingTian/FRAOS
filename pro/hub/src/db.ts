@@ -19,6 +19,14 @@ export type FilterPlan = { filterName: string; exposureSeconds: number; count: n
 
 export type FilterRemaining = { filterName: string; exposureSeconds: number; countRemaining: number }
 
+export type MosaicPanel = {
+  id: number
+  raHours: number
+  decDeg: number
+  positionAngleDeg: number
+  name: string
+}
+
 export type SessionRow = {
   id: string
   target: string
@@ -34,6 +42,8 @@ export type SessionRow = {
   createdAt: string
   updatedAt: string
   plannedStartIso: string | null
+  /** Admin force-run: do not unschedule until this instant (ISO). */
+  adminForceRunUntilIso: string | null
   scheduleReasons: string[]
   raHours: number | null
   decDeg: number | null
@@ -46,6 +56,9 @@ export type SessionRow = {
   catalogQuery: string | null
   ninaSequenceJson: string | null
   remainingByFilter: FilterRemaining[] | null
+  mosaicMode: boolean
+  mosaicPanels: MosaicPanel[] | null
+  mosaicRemainingByPanel: FilterRemaining[][] | null
 }
 
 export type ObservatoryMode = 'manual' | 'auto'
@@ -195,6 +208,20 @@ function migrate(database: Database.Database): void {
   if (!names.has('remaining_by_filter_json')) {
     addCol(`ALTER TABLE sessions ADD COLUMN remaining_by_filter_json TEXT`)
   }
+  if (!names.has('mosaic_mode')) addCol(`ALTER TABLE sessions ADD COLUMN mosaic_mode INTEGER DEFAULT 0`)
+  if (!names.has('mosaic_panels_json')) addCol(`ALTER TABLE sessions ADD COLUMN mosaic_panels_json TEXT`)
+  if (!names.has('mosaic_remaining_by_panel_json')) {
+    addCol(`ALTER TABLE sessions ADD COLUMN mosaic_remaining_by_panel_json TEXT`)
+  }
+  if (!names.has('admin_force_run_until_iso')) {
+    addCol(`ALTER TABLE sessions ADD COLUMN admin_force_run_until_iso TEXT`)
+  }
+
+  const nightCols = database.prepare(`PRAGMA table_info(project_nights)`).all() as Array<{ name: string }>
+  const nightNames = new Set(nightCols.map((c) => c.name))
+  if (!nightNames.has('admin_force_run_until_iso')) {
+    addCol(`ALTER TABLE project_nights ADD COLUMN admin_force_run_until_iso TEXT`)
+  }
 }
 
 function parseJsonArray(raw: unknown): string[] {
@@ -237,7 +264,7 @@ function rowToSession(row: Record<string, unknown>): SessionRow {
     status: row.status as SessionStatus,
     sessionType,
     sequenceTemplate: (row.sequence_template as SessionType) ?? sessionType,
-    outputMode: row.output_mode as SessionOutputMode,
+    outputMode: row.output_mode === 'raw_zip' || row.output_mode === 'stacked_master' ? 'raw_zip' : 'none',
     outputModeRequested: row.output_mode_requested != null ? String(row.output_mode_requested) : null,
     whenClosedBehavior: row.when_closed_behavior != null ? String(row.when_closed_behavior) : null,
     projectMode: Number(row.project_mode) === 1,
@@ -245,6 +272,8 @@ function rowToSession(row: Record<string, unknown>): SessionRow {
     createdAt: String(row.created_at),
     updatedAt: String(row.updated_at),
     plannedStartIso: row.planned_start_iso != null ? String(row.planned_start_iso) : null,
+    adminForceRunUntilIso:
+      row.admin_force_run_until_iso != null ? String(row.admin_force_run_until_iso) : null,
     scheduleReasons: parseJsonArray(row.schedule_reasons_json),
     raHours: row.ra_hours != null ? Number(row.ra_hours) : null,
     decDeg: row.dec_deg != null ? Number(row.dec_deg) : null,
@@ -259,6 +288,63 @@ function rowToSession(row: Record<string, unknown>): SessionRow {
     catalogQuery: row.catalog_query != null ? String(row.catalog_query) : null,
     ninaSequenceJson: row.nina_sequence_json != null ? String(row.nina_sequence_json) : null,
     remainingByFilter: parseFilterRemaining(row.remaining_by_filter_json),
+    mosaicMode: Number(row.mosaic_mode) === 1,
+    mosaicPanels: parseMosaicPanels(row.mosaic_panels_json),
+    mosaicRemainingByPanel: parseMosaicRemaining(row.mosaic_remaining_by_panel_json),
+  }
+}
+
+function parseMosaicPanels(raw: unknown): MosaicPanel[] | null {
+  if (typeof raw !== 'string' || !raw.trim()) return null
+  try {
+    const parsed = JSON.parse(raw) as unknown
+    if (!Array.isArray(parsed) || parsed.length === 0) return null
+    const out: MosaicPanel[] = []
+    for (const p of parsed) {
+      if (!p || typeof p !== 'object') continue
+      const rec = p as Record<string, unknown>
+      const raHours = Number(rec.raHours)
+      const decDeg = Number(rec.decDeg)
+      const positionAngleDeg = Number(rec.positionAngleDeg)
+      const id = Number(rec.id)
+      if (![raHours, decDeg, positionAngleDeg, id].every((x) => Number.isFinite(x))) continue
+      out.push({
+        id,
+        raHours,
+        decDeg,
+        positionAngleDeg,
+        name: typeof rec.name === 'string' ? rec.name : `Panel ${id}`,
+      })
+    }
+    return out.length > 0 ? out : null
+  } catch {
+    return null
+  }
+}
+
+function parseMosaicRemaining(raw: unknown): FilterRemaining[][] | null {
+  if (typeof raw !== 'string' || !raw.trim()) return null
+  try {
+    const parsed = JSON.parse(raw) as unknown
+    if (!Array.isArray(parsed)) return null
+    return parsed.map((rows) => {
+      if (!Array.isArray(rows)) return []
+      return rows
+        .map((p) => {
+          if (!p || typeof p !== 'object') return null
+          const rec = p as Record<string, unknown>
+          const filterName = typeof rec.filterName === 'string' ? rec.filterName : ''
+          const exposureSeconds = Number(rec.exposureSeconds)
+          const countRemaining = Number(rec.countRemaining)
+          if (!filterName || !Number.isFinite(exposureSeconds) || !Number.isFinite(countRemaining)) {
+            return null
+          }
+          return { filterName, exposureSeconds, countRemaining }
+        })
+        .filter((x): x is FilterRemaining => x != null)
+    })
+  } catch {
+    return null
   }
 }
 
@@ -338,6 +424,9 @@ export function insertSession(input: {
   variableStarBlockHours?: number | null
   catalogQuery?: string | null
   ninaSequenceJson?: string | null
+  mosaicMode?: boolean
+  mosaicPanels?: MosaicPanel[] | null
+  mosaicRemainingByPanel?: FilterRemaining[][] | null
 }): SessionRow {
   const now = new Date().toISOString()
   const sessionType = input.sessionType ?? 'dso'
@@ -349,9 +438,10 @@ export function insertSession(input: {
         camera_cooling_temp_c, created_at, updated_at, planned_start_iso,
         schedule_reasons_json, ra_hours, dec_deg, filter, exposure_seconds, count,
         filter_plans_json, estimated_duration_seconds, variable_star_block_hours,
-        catalog_query, nina_sequence_json
+        catalog_query, nina_sequence_json, mosaic_mode, mosaic_panels_json,
+        mosaic_remaining_by_panel_json
       ) VALUES (
-        ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, '[]', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+        ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, '[]', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
       )`
     )
     .run(
@@ -376,7 +466,10 @@ export function insertSession(input: {
       input.estimatedDurationSeconds ?? null,
       input.variableStarBlockHours ?? null,
       input.catalogQuery ?? null,
-      input.ninaSequenceJson ?? null
+      input.ninaSequenceJson ?? null,
+      input.mosaicMode ? 1 : 0,
+      input.mosaicPanels ? JSON.stringify(input.mosaicPanels) : null,
+      input.mosaicRemainingByPanel ? JSON.stringify(input.mosaicRemainingByPanel) : null
     )
   return getSessionById(input.id)!
 }
@@ -397,6 +490,27 @@ export function patchSessionSchedule(
 export function patchSessionStatus(id: string, status: SessionStatus): void {
   const now = new Date().toISOString()
   getDb().prepare(`UPDATE sessions SET status = ?, updated_at = ? WHERE id = ?`).run(status, now, id)
+}
+
+/** Schedule a normal queue row for admin force-run (planned start = now, occupancy until end). */
+export function patchSessionAdminForceRun(
+  id: string,
+  input: { plannedStartIso: string; adminForceRunUntilIso: string }
+): SessionRow | null {
+  const now = new Date().toISOString()
+  getDb()
+    .prepare(
+      `UPDATE sessions SET status = 'scheduled', planned_start_iso = ?, admin_force_run_until_iso = ?,
+        schedule_reasons_json = ?, updated_at = ? WHERE id = ?`
+    )
+    .run(
+      input.plannedStartIso,
+      input.adminForceRunUntilIso,
+      JSON.stringify(['Admin force-run scheduled.']),
+      now,
+      id
+    )
+  return getSessionById(id)
 }
 
 /** Update planned start without changing status (used for in-progress project parents). */
@@ -616,5 +730,7 @@ export function sessionToPublicJson(s: SessionRow): Record<string, unknown> {
     cameraCoolingTempC: s.cameraCoolingTempC,
     variableStarBlockHours: s.variableStarBlockHours,
     catalogQuery: s.catalogQuery,
+    mosaicMode: s.mosaicMode,
+    mosaicPanels: s.mosaicPanels,
   }
 }

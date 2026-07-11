@@ -57,6 +57,30 @@ export function weatherCoverageOk(
   return covered >= duration * requiredFraction
 }
 
+/** Admin force-run: >=80% weather-permitted coverage over the session window. */
+export async function validateAdminRunWeatherWindow(
+  startMs: number,
+  endMs: number
+): Promise<{ ok: true } | { ok: false; reason: string }> {
+  const intervals = await getTonightWeatherPermittedIntervals()
+  if (intervals.status !== 'ok') {
+    return { ok: false, reason: intervals.reason ?? 'Weather forecast unavailable.' }
+  }
+  if (intervals.globalHardBlocked === true) {
+    return {
+      ok: false,
+      reason: intervals.globalHardBlockReason ?? 'Tonight blocked by global weather trigger.',
+    }
+  }
+  if (!weatherCoverageOk(intervals.permittedIntervals, startMs, endMs, 0.8)) {
+    return {
+      ok: false,
+      reason: 'Weather-permitted coverage is below 80% for this session window.',
+    }
+  }
+  return { ok: true }
+}
+
 export async function getTonightWeatherPermittedIntervals(): Promise<TonightWeatherIntervalsResult> {
   const { lat, lon } = getObservatorySite()
   if (!Number.isFinite(lat) || !Number.isFinite(lon) || (lat === 0 && lon === 0)) {
@@ -161,9 +185,22 @@ export async function getTonightWeatherPermittedIntervals(): Promise<TonightWeat
           ? `Global weather trigger: no ${MIN_CONSECUTIVE_CLEAR_CLOUD_HOURS}-hour consecutive run with cloud cover < 10%.`
           : ''
 
+    let effectivePermittedIntervals: TimeInterval[] = [...permittedIntervals]
+    try {
+      const { getAdminClosedWindowsInRange } = await import(
+        '@/lib/cloud/personal-imaging/admin-closed-window-store'
+      )
+      const adminClosedWindows = await getAdminClosedWindowsInRange(nightStartMs, nightEndMs)
+      for (const w of adminClosedWindows) {
+        effectivePermittedIntervals = subtractOccupiedFromFree(effectivePermittedIntervals, w)
+      }
+    } catch {
+      /* weather-only fallback */
+    }
+
     return {
       status: 'ok',
-      permittedIntervals,
+      permittedIntervals: effectivePermittedIntervals,
       nightStartMs,
       nightEndMs,
       globalHardBlocked,

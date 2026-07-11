@@ -356,12 +356,16 @@ export function NewImagingSessionForm(props: Props) {
               >
                 Raw ZIP
               </button>
-              {/* Stacked Master removed — Borean Astro no longer offers this output mode. */}
               <button type="button" className={s.outputMode === 'none' ? 'nis-pill active' : 'nis-pill'} onClick={() => s.setOutputMode('none')}>None</button>
             </div>
             {s.storageOverQuota ? (
               <p className="mt-2 text-xs text-white/55">
                 Cloud storage is full. Delete files in Settings or choose None.
+              </p>
+            ) : null}
+            {s.mosaicMode && s.mosaicPanels.length > 0 ? (
+              <p className="mt-2 text-xs text-emerald-300/90">
+                Mosaic draft: {s.mosaicPanels.length} panel{s.mosaicPanels.length === 1 ? '' : 's'} from Atlas.
               </p>
             ) : null}
           </div>
