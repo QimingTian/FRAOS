@@ -71,6 +71,14 @@ cd standard/control-client && npm install && npm run tauri dev
 
 See each edition’s `README.md` for package layout (Control, Station, hub, shared, website).
 
-## License / contributing
+## License
 
-Configure your own Cloudflare R2, Astrometry.net, Stripe, Upstash KV, and domain. Nothing in this tree should contain production credentials.
+Licensed under the [Apache License 2.0](LICENSE).
+
+You may use, modify, and redistribute FRAOS (including commercially), provided you keep the license and attribution notices. See [`NOTICE`](NOTICE) for copyright and trademark notes — **FRAOS** / **Borean Astro** names and logos are not licensed for rebranding use.
+
+Copyright © 2026 Qiming Tian.
+
+## Contributing
+
+Configure your own Cloudflare R2, Astrometry.net, Stripe, Upstash KV, and domain. Nothing in this tree should contain production credentials. Contributions are accepted under the same Apache-2.0 terms.
