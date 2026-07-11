@@ -42,16 +42,18 @@ export default function FraosPage() {
       </section>
 
       <section className="page-shell pb-24 pt-8 md:pb-32">
-        <div className="mt-10 grid gap-6 md:grid-cols-2">
-          {PRODUCT_PLANS.map((plan, index) => (
-            <ScrollReveal key={plan} delay={(index % 2) * 0.08} className="h-full">
-              <FraosEditionPanel plan={plan} />
-            </ScrollReveal>
-          ))}
+        <div className="mt-10 flex flex-col gap-6">
+          <div className="grid gap-6 md:grid-cols-2">
+            {PRODUCT_PLANS.map((plan, index) => (
+              <ScrollReveal key={plan} delay={(index % 2) * 0.08} className="h-full">
+                <FraosEditionPanel plan={plan} />
+              </ScrollReveal>
+            ))}
+          </div>
+          <ScrollReveal delay={0.12}>
+            <FraosOpenSourceBanner />
+          </ScrollReveal>
         </div>
-        <ScrollReveal delay={0.12}>
-          <FraosOpenSourceBanner />
-        </ScrollReveal>
       </section>
     </>
   )
