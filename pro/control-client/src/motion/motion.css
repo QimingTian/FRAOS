@@ -1,0 +1,178 @@
+:root {
+  --motion-ease-spring: cubic-bezier(0.32, 0.72, 0, 1);
+  --motion-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --motion-duration-sm: 0.28s;
+  --motion-duration-md: 0.4s;
+  --motion-duration-lg: 0.55s;
+  --motion-stagger-base: 0.16s;
+  --motion-stagger-step: 0.03s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-duration-sm: 0.01ms;
+    --motion-duration-md: 0.01ms;
+    --motion-duration-lg: 0.01ms;
+    --motion-stagger-base: 0ms;
+    --motion-stagger-step: 0ms;
+  }
+}
+
+.motion-expand {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--motion-duration-md) var(--motion-ease-spring);
+  pointer-events: none;
+}
+
+.motion-expand.is-open {
+  grid-template-rows: 1fr;
+  pointer-events: auto;
+}
+
+.motion-expand__inner {
+  overflow: hidden;
+  min-height: 0;
+}
+
+.motion-expand__content {
+  min-height: 0;
+}
+
+.motion-stagger {
+  display: flex;
+  flex-wrap: wrap;
+  gap: inherit;
+}
+
+.motion-stagger:not(.is-active) > * {
+  transition: none;
+}
+
+.motion-stagger.is-active > * {
+  opacity: 0;
+  transform: translateY(6px);
+  transition:
+    opacity var(--motion-duration-sm) var(--motion-ease-spring),
+    transform var(--motion-duration-sm) var(--motion-ease-spring);
+}
+
+.motion-stagger.is-active > *:nth-child(1) {
+  opacity: 1;
+  transform: translateY(0);
+  transition-delay: calc(var(--motion-stagger-base) + var(--motion-stagger-step) * 0);
+}
+.motion-stagger.is-active > *:nth-child(2) {
+  opacity: 1;
+  transform: translateY(0);
+  transition-delay: calc(var(--motion-stagger-base) + var(--motion-stagger-step) * 1);
+}
+.motion-stagger.is-active > *:nth-child(3) {
+  opacity: 1;
+  transform: translateY(0);
+  transition-delay: calc(var(--motion-stagger-base) + var(--motion-stagger-step) * 2);
+}
+.motion-stagger.is-active > *:nth-child(4) {
+  opacity: 1;
+  transform: translateY(0);
+  transition-delay: calc(var(--motion-stagger-base) + var(--motion-stagger-step) * 3);
+}
+.motion-stagger.is-active > *:nth-child(5) {
+  opacity: 1;
+  transform: translateY(0);
+  transition-delay: calc(var(--motion-stagger-base) + var(--motion-stagger-step) * 4);
+}
+.motion-stagger.is-active > *:nth-child(6) {
+  opacity: 1;
+  transform: translateY(0);
+  transition-delay: calc(var(--motion-stagger-base) + var(--motion-stagger-step) * 5);
+}
+.motion-stagger.is-active > *:nth-child(7) {
+  opacity: 1;
+  transform: translateY(0);
+  transition-delay: calc(var(--motion-stagger-base) + var(--motion-stagger-step) * 6);
+}
+
+.motion-expand .motion-stagger > * {
+  opacity: 1;
+  transform: none;
+  transition: none;
+}
+
+.motion-fade {
+  opacity: 0;
+  transform: translateY(8px);
+  transition:
+    opacity var(--motion-duration-md) var(--motion-ease-spring),
+    transform var(--motion-duration-md) var(--motion-ease-spring);
+}
+
+.motion-fade.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.motion-overlay {
+  opacity: 0;
+  transform: translateY(18px);
+  pointer-events: none;
+  transition:
+    opacity var(--motion-duration-md) var(--motion-ease-spring),
+    transform var(--motion-duration-md) var(--motion-ease-spring);
+}
+
+.motion-overlay.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.motion-modal {
+  opacity: 0;
+  transition: opacity var(--motion-duration-md) var(--motion-ease-spring);
+}
+
+.motion-modal.is-visible {
+  opacity: 1;
+}
+
+.motion-modal-panel {
+  opacity: 0;
+  transform: translateY(12px) scale(0.98);
+  transition:
+    opacity var(--motion-duration-md) var(--motion-ease-spring),
+    transform var(--motion-duration-md) var(--motion-ease-spring);
+}
+
+.motion-modal.is-visible .motion-modal-panel {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.motion-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: var(--overlay-backdrop);
+}
+
+.nis-dropdown-motion.motion-expand {
+  position: absolute;
+  z-index: 5;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 0.3rem;
+}
+
+.session-queue-item {
+  transition: border-color var(--motion-duration-sm) var(--motion-ease-spring);
+}
+
+.session-queue-list {
+  transition: gap var(--motion-duration-md) var(--motion-ease-spring);
+}

@@ -1,0 +1,48 @@
+:root {
+  color-scheme: dark;
+  font-family: 'SF Pro Text', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  line-height: 1.45;
+  font-weight: 400;
+  color: var(--fg-primary, #eee9dc);
+  background-color: var(--bg-primary, #08090a);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+
+  --console-bg: var(--bg-primary, #08090a);
+  --console-panel: rgba(255, 255, 255, 0.04);
+  --console-border: rgba(255, 255, 255, 0.14);
+  --console-border-dim: rgba(255, 255, 255, 0.1);
+  --console-accent: var(--fg-primary, #eee9dc);
+  --console-warn: #ffd400;
+  --console-danger: #ff0000;
+  --console-mono: 'JetBrains Mono', 'SF Mono', ui-monospace, Menlo, Monaco, Consolas, monospace;
+  --lamp-ok: #00e600;
+  --lamp-warning: #ffd400;
+  --lamp-error: #ff0000;
+  --lamp-off: #555555;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+code {
+  font-family: var(--console-mono);
+  font-size: 0.88em;
+}

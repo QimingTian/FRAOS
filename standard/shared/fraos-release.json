@@ -1,0 +1,26 @@
+{
+  "channel": "stable",
+  "station": {
+    "latestVersion": "0.1.9",
+    "downloadUrlWindows": "https://YOUR_DOMAIN/releases/borean-station-0.1.9-windows-setup.exe",
+    "releaseNotes": "Fix Emergency STOP delivery when SSE is connected (agent polls reliably). Trust Mozilla CA bundle for Cloudflare."
+  },
+  "control": {
+    "latestVersion": "0.1.25",
+    "downloadUrlWindows": "https://YOUR_DOMAIN/releases/borean-control-0.1.25-windows-setup.exe",
+    "downloadUrlMac": "https://YOUR_DOMAIN/releases/borean-control-0.1.25-macos.dmg",
+    "releaseNotes": "Fix Close Dome timeline block to connect flush with sessions (match Pomfret Remote).",
+    "editions": {
+      "standard": {
+        "downloadUrlWindows": "https://YOUR_DOMAIN/releases/borean-control-0.1.25-windows-setup.exe",
+        "downloadUrlMac": "https://YOUR_DOMAIN/releases/borean-control-0.1.25-macos.dmg"
+      },
+      "pro": {
+        "downloadUrlMac": "https://YOUR_DOMAIN/releases/borean-control-pro-0.1.25-macos.dmg"
+      },
+      "max": {
+        "downloadUrlMac": "https://YOUR_DOMAIN/releases/borean-control-max-0.1.25-macos.dmg"
+      }
+    }
+  }
+}

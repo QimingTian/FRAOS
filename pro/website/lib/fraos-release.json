@@ -1,0 +1,14 @@
+{
+  "channel": "stable",
+  "station": {
+    "latestVersion": "0.1.3",
+    "downloadUrlWindows": "https://YOUR_DOMAIN/releases/borean-station-0.1.3-windows-setup.exe",
+    "releaseNotes": "NINA plugin options fix; plugin Update button in System Status; agent HTTPError fix; mount telemetry reload."
+  },
+  "control": {
+    "latestVersion": "0.1.20",
+    "downloadUrlWindows": "https://YOUR_DOMAIN/releases/borean-control-0.1.16-windows-setup.exe",
+    "downloadUrlMac": "https://YOUR_DOMAIN/releases/borean-control-0.1.20-macos.dmg",
+    "releaseNotes": "Imaging Dashboard with per-session progress/preview streams; Edit status pills on session rows; session list persistence fix on cloud hub."
+  }
+}

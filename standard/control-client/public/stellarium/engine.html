@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui">
+<title>Borean Atlas Engine</title>
+<meta name="description" content="Borean Astro sky viewer — Stellarium Web Engine only, no bundled UI.">
+<style>
+  /* Fullscreen transparent canvas; parent Atlas page owns all chrome. */
+  html, body { margin: 0; padding: 0; background: #000; height: 100%; width: 100%; overflow: hidden; }
+  #stel-canvas {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    background: #000;
+    touch-action: none;
+  }
+</style>
+</head>
+<body>
+<canvas id="stel-canvas"></canvas>
+<script src="/stellarium/js/stellarium-web-engine.js"></script>
+<script>
+(function () {
+  var DD2R = Math.PI / 180
+  var params = new URLSearchParams(location.search)
+  var canvas = document.getElementById('stel-canvas')
+
+  function sizeCanvas () {
+    var dpr = window.devicePixelRatio || 1
+    var w = Math.max(1, Math.floor(window.innerWidth * dpr))
+    var h = Math.max(1, Math.floor(window.innerHeight * dpr))
+    if (canvas.width !== w) canvas.width = w
+    if (canvas.height !== h) canvas.height = h
+  }
+  sizeCanvas()
+  window.addEventListener('resize', function () {
+    sizeCanvas()
+    try { if (window.stel && window.stel.resize) window.stel.resize() } catch (_) {}
+  })
+
+  function parseNum (v, fallback) {
+    var n = parseFloat(v)
+    return Number.isFinite(n) ? n : fallback
+  }
+
+  /* Convert JS Date to MJD (Modified Julian Date) used by stel.core.observer.utc. */
+  function dateToMJD (d) {
+    return (d.getTime() / 86400000) + 2440587.5 - 2400000.5
+  }
+
+  if (typeof StelWebEngine !== 'function') {
+    console.error('[borean-stellarium] StelWebEngine global missing; bundle failed to load.')
+    return
+  }
+
+  /* Emscripten 3.x MODULARIZE=1 factory returns a Promise resolving to the ready Module, AND
+   * pre.js still triggers user `onReady` from onRuntimeInitialized. We wire both so whichever
+   * path fires first hands us the engine. */
+  var initialised = false
+  function initStel (stel) {
+    if (initialised) return
+    initialised = true
+    window.stel = stel
+
+    try {
+      stel.setFont('regular', '/fonts/Roboto-Regular.ttf')
+      stel.setFont('bold', '/fonts/Roboto-Bold.ttf')
+    } catch (err) { console.warn('[borean-stellarium] setFont failed', err) }
+
+    var core = stel.core
+    /* Mirror official web-frontend App.vue addDataSource wiring (see apps/web-frontend/src/App.vue
+     * setStateFromQueryArgs path). Each source wrapped so one 404 doesn't short-circuit. */
+    function addSrc (module, opts, label) {
+      try { module.addDataSource(opts) } catch (err) { console.warn('[borean-stellarium] addDataSource failed: ' + label, err) }
+    }
+    addSrc(core.stars, { url: '/skydata/stars' }, 'stars')
+    addSrc(core.skycultures, { url: '/skydata/skycultures/western', key: 'western' }, 'skycultures/western')
+    addSrc(core.dsos, { url: '/skydata/dso' }, 'dso')
+    addSrc(core.landscapes, { url: '/skydata/landscapes/guereins', key: 'guereins' }, 'landscapes/guereins')
+    addSrc(core.milkyway, { url: '/skydata/surveys/milkyway' }, 'milkyway')
+    /* DSS colored HiPS photographic sky survey (deep-sky imagery). Same host the official
+     * Stellarium Web front-end uses; the engine handles HiPS fetching/tiling/fading itself. */
+    addSrc(core.dss, { url: 'https://alasky.cds.unistra.fr/DSS/DSSColor/' }, 'dss')
+    addSrc(core.minor_planets, { url: '/skydata/mpcorb.dat', key: 'mpc_asteroids' }, 'mpcorb')
+    addSrc(core.planets, { url: '/skydata/surveys/sso/moon', key: 'moon' }, 'sso/moon')
+    addSrc(core.planets, { url: '/skydata/surveys/sso/sun', key: 'sun' }, 'sso/sun')
+    /* Do NOT register moon HiPS as key "default". In the engine (planets.c), default_hips is the
+     * fallback for every planet/moon without its own survey — wiring moon here makes Jupiter,
+     * Mars, Galilean satellites, etc. all render as the Moon. Instead, attach per-body HiPS
+     * below so each planet/moon renders with its own real surface. Saturn and Uranus have no
+     * surface HiPS at CDS (only their moons); they stay as point sources. */
+    var CDS = 'https://alasky.cds.unistra.fr/Planets/'
+    var PLANET_HIPS = [
+      ['mercury',   'CDS_P_Mercury_MESSENGER-MDIS-LOI-166m'],
+      ['venus',     'CDS_P_Venus_Magellan_C3-MDIR-ClrTopo-6600m-color'],
+      ['mars',      'Mars_Viking_MDIM21'],
+      ['jupiter',   'CDS_P_Jupiter_PIA07782'],
+      ['neptune',   'CDS_P_Neptune_Voyager2'],
+      ['io',        'CDS_P_Io_Galileo-SSI-1km'],
+      ['europa',    'CDS_P_Europa_Voyager-GalileoSSI-500m'],
+      ['ganymede',  'CDS_P_Ganymede_VoyagerGalileo-SSI-1km'],
+      ['callisto',  'CDS_P_Callisto_Voyager-Galileo-simp-1km'],
+      ['mimas',     'CDS_P_Mimas_Cassini-PIA17214'],
+      ['enceladus', 'CDS_P_Enceladus_Cassini-110m'],
+      ['dione',     'CDS_P_Dione_Cassini-PIA12577'],
+      ['rhea',      'CDS_P_Rhea_Cassini-PIA12803'],
+      ['titan',     'CDS_P_Titan_ISS-P19658-4km'],
+      ['iapetus',   'CDS_P_Iapetus_Cassini-PIA18436'],
+      ['miranda',   'CDS_P_Miranda_Voyager'],
+      ['ariel',     'CDS_P_Ariel_Voyager'],
+      ['umbriel',   'CDS_P_Umbriel_Voyager'],
+      ['titania',   'CDS_P_Titania_Voyager'],
+      ['oberon',    'CDS_P_Oberon_Voyager'],
+      ['triton',    'CDS_P_Triton_Voyager2-600m'],
+      ['pluto',     'CDS_P_Pluto_NewHorizons-Jul2017-300m'],
+      ['charon',    'CDS_P_Charon_NewHorizon-PIA19866']
+    ]
+    PLANET_HIPS.forEach(function (p) {
+      addSrc(core.planets, { url: CDS + p[1], key: p[0] }, 'sso/' + p[0])
+    })
+    addSrc(core.comets, { url: '/skydata/CometEls.txt', key: 'mpc_comets' }, 'CometEls')
+    addSrc(core.satellites, { url: '/skydata/tle_satellite.jsonl.gz', key: 'jsonl/sat' }, 'tle_satellite')
+
+    try {
+      core.constellations.show_only_pointed = false
+      core.atmosphere.visible = false
+      core.landscapes.visible = true
+      core.dsos.visible = true
+      core.dss.visible = true
+    } catch (err) { console.warn('[borean-stellarium] toggle defaults failed', err) }
+
+    try {
+      var observer = core.observer
+      observer.latitude = parseNum(params.get('lat'), 0) * DD2R
+      observer.longitude = parseNum(params.get('lng'), 0) * DD2R
+      observer.elevation = parseNum(params.get('elev'), 0)
+
+      var dateParam = params.get('date')
+      var when = dateParam ? new Date(dateParam) : new Date()
+      if (isNaN(when.getTime())) when = new Date()
+      observer.utc = dateToMJD(when)
+
+      observer.yaw = parseNum(params.get('az'), 0) * DD2R
+      observer.pitch = parseNum(params.get('alt'), 30) * DD2R
+      core.fov = parseNum(params.get('fov'), 90) * DD2R
+      core.time_speed = 1
+    } catch (err) { console.warn('[borean-stellarium] observer init failed', err) }
+
+    /* Post ready repeatedly so the parent listener — attached during React mount which may race
+     * the iframe — is guaranteed to catch at least one. */
+    var postReady = function () {
+      try {
+        if (window.parent && window.parent !== window) {
+          window.parent.postMessage({ source: 'borean-stellarium', type: 'ready' }, '*')
+        }
+      } catch (_) {}
+    }
+    postReady()
+    ;[100, 400, 1200, 3000].forEach(function (ms) { setTimeout(postReady, ms) })
+
+    /* Serialize core.selection getInfo(*) for Atlas info panel (obj_info.h ALL_INFO keys). */
+    var BOREAN_INFO_LABELS = {
+      vmag: 'Magnitude',
+      search_vmag: 'Search magnitude',
+      distance: 'Distance',
+      radec: 'RA / Dec (ICRF)',
+      phase: 'Phase',
+      radius: 'Angular radius',
+      lha: 'Hour angle',
+      next_peak: 'Next peak',
+      pole: 'Rotation pole',
+      pvo: 'Position & velocity (ICRF)'
+    }
+
+    function boreanFmtVec4 (a) {
+      if (!a || a.length < 4) return ''
+      return [0, 1, 2, 3].map(function (i) { return Number(a[i]).toPrecision(6) }).join(', ')
+    }
+
+    function boreanMjdToUtcHint (mjd) {
+      try {
+        var jd = mjd + 2400000.5
+        var ms = (jd - 2440587.5) * 86400000
+        return new Date(ms).toISOString().replace('T', ' ').slice(0, 19) + ' UTC'
+      } catch (_) {
+        return ''
+      }
+    }
+
+    function boreanSexagesimalRaDec (stel, vec) {
+      if (!vec || vec.length < 3 || !stel.c2s) return null
+      try {
+        var s = stel.c2s([vec[0], vec[1], vec[2], vec[3] || 0])
+        var raH = (((s[0] * 12) / Math.PI) % 24 + 24) % 24
+        var decD = (s[1] * 180) / Math.PI
+        var rah = Math.floor(raH)
+        var ram = Math.floor((raH - rah) * 60)
+        var ras = Math.round((((raH - rah) * 60 - ram) * 60) * 100) / 100
+        var sgn = decD >= 0 ? '+' : '-'
+        var ad = Math.abs(decD)
+        var dd = Math.floor(ad)
+        var dm = Math.floor((ad - dd) * 60)
+        var dss = Math.round((((ad - dd) * 60 - dm) * 60) * 100) / 100
+        return rah + 'h ' + ram + 'm ' + ras + 's, ' + sgn + dd + '° ' + dm + '\' ' + dss + '"'
+      } catch (_) {
+        return null
+      }
+    }
+
+    function boreanPushInfoRows (rows, key, val, stel, obs, sel) {
+      if (val === undefined || val === null) return
+      if (typeof val === 'number' && !isFinite(val)) return
+      var label = BOREAN_INFO_LABELS[key] || key
+      if (typeof val === 'number') {
+        if (key === 'vmag' || key === 'search_vmag') {
+          rows.push({ label: label, value: val.toFixed(2) })
+          return
+        }
+        if (key === 'phase') {
+          rows.push({ label: label, value: (val * 100).toFixed(1) + '% illuminated' })
+          return
+        }
+        if (key === 'distance') {
+          rows.push({ label: label, value: val.toFixed(6) })
+          return
+        }
+        if (key === 'radius' || key === 'lha') {
+          rows.push({ label: label, value: ((val * 180) / Math.PI).toFixed(4) + '°' })
+          return
+        }
+        if (key === 'next_peak') {
+          var utc = boreanMjdToUtcHint(val)
+          rows.push({
+            label: label,
+            value: 'MJD ' + val.toFixed(5) + (utc ? ' — ' + utc : '')
+          })
+          return
+        }
+        rows.push({ label: label, value: String(val) })
+        return
+      }
+      if (key === 'pvo' && val && val.length === 2) {
+        var pv = val[0]
+        var vv = val[1]
+        if (pv && pv.length >= 4) {
+          rows.push({ label: 'Position (ICRF)', value: boreanFmtVec4(pv) })
+        }
+        if (vv && vv.length >= 4) {
+          rows.push({ label: 'Velocity', value: boreanFmtVec4(vv) })
+        }
+        return
+      }
+      if (key === 'radec' && val && typeof val === 'object' && val.length >= 3) {
+        var line = boreanSexagesimalRaDec(stel, val)
+        if (line) rows.push({ label: label, value: line })
+        return
+      }
+      if (key === 'pole' && val && val.length >= 3) {
+        rows.push({
+          label: label,
+          value: [val[0], val[1], val[2]].map(function (x) { return Number(x).toFixed(4) }).join(', ')
+        })
+        return
+      }
+    }
+
+    function boreanPostSelectionInfo () {
+      try {
+        var sel = core.selection
+        if (!sel) {
+          if (window.parent && window.parent !== window) {
+            window.parent.postMessage({ source: 'borean-stellarium', type: 'selection-info', payload: null }, '*')
+          }
+          return
+        }
+        var obs = core.observer
+        try {
+          if (typeof sel.getInfo === 'function') sel.getInfo('radec')
+        } catch (_) {}
+        var id = ''
+        try {
+          id = String(sel.id != null ? sel.id : '')
+        } catch (_) {}
+        var rows = []
+        try {
+          if (sel.type) rows.push({ label: 'Object type', value: String(sel.type) })
+        } catch (_) {}
+        try {
+          if (sel.model) rows.push({ label: 'Model', value: String(sel.model) })
+        } catch (_) {}
+        try {
+          var pr = sel.getInfo('radec')
+          if (pr && pr.length >= 3) {
+            var rdLine = boreanSexagesimalRaDec(stel, pr)
+            if (rdLine) rows.push({ label: BOREAN_INFO_LABELS.radec, value: rdLine })
+            if (obs && stel.convertFrame && stel.c2s) {
+              var vOa = stel.convertFrame(obs, 'ICRF', 'OBSERVED', [pr[0], pr[1], pr[2], pr[3] || 0])
+              var spa = stel.c2s(vOa)
+              var azDeg = (spa[0] * 180) / Math.PI
+              var altDeg = (spa[1] * 180) / Math.PI
+              rows.push({ label: 'Azimuth / altitude', value: azDeg.toFixed(2) + '° / ' + altDeg.toFixed(2) + '°' })
+            }
+          }
+        } catch (_) {}
+        /* Remaining obj_info.h ALL_INFO keys + pvo (not radec — handled above). */
+        var keys = ['vmag', 'search_vmag', 'distance', 'phase', 'radius', 'lha', 'next_peak', 'pole', 'pvo']
+        var ki
+        for (ki = 0; ki < keys.length; ki++) {
+          try {
+            var v2 = sel.getInfo(keys[ki])
+            boreanPushInfoRows(rows, keys[ki], v2, stel, obs, sel)
+          } catch (_) {}
+        }
+        try {
+          if (typeof sel.get_json_data === 'function') {
+            var raw = sel.get_json_data()
+            var js = raw
+            if (typeof raw === 'string') {
+              try {
+                js = JSON.parse(raw)
+              } catch (_) {
+                js = raw
+              }
+            }
+            var blob = typeof js === 'object' && js !== null ? JSON.stringify(js, null, 2) : String(js)
+            if (blob.length > 4000) blob = blob.slice(0, 4000) + '\n…'
+            rows.push({ label: 'Catalog / engine metadata (JSON)', value: blob })
+          }
+        } catch (_) {}
+        if (window.parent && window.parent !== window) {
+          window.parent.postMessage({ source: 'borean-stellarium', type: 'selection-info', payload: { id: id, rows: rows } }, '*')
+        }
+      } catch (_) {}
+    }
+
+    /* Forward selection changes + refresh Borean overlays (trajectory). */
+    try {
+      core.change && core.change('selection', function () {
+        try {
+          if (window.parent && window.parent !== window) {
+            window.parent.postMessage({ source: 'borean-stellarium', type: 'selection-changed' }, '*')
+          }
+        } catch (_) {}
+        try { boreanPostSelectionInfo() } catch (_) {}
+        try { boreanScheduleTraj() } catch (_) {}
+      })
+    } catch (_) {}
+
+    /* --- Borean overlays: 30° altitude circle + dashed trajectory for selection ---
+     * Off by default; parent Atlas toggles via postMessage (overlay-alt30 / overlay-orbit). */
+    var boreanOverlayLayer = null
+    var boreanAlt30Geo = null
+    var boreanTrajGeo = null
+    var boreanTrajTimer = null
+    var boreanShowAlt30 = false
+    var boreanShowOrbit = false
+
+    function boreanEnsureLayer () {
+      if (boreanOverlayLayer) return boreanOverlayLayer
+      try {
+        boreanOverlayLayer = stel.createLayer({})
+        try {
+          if (typeof boreanOverlayLayer.visible === 'boolean') boreanOverlayLayer.visible = true
+        } catch (_) {}
+      } catch (err) {
+        console.warn('[borean-stellarium] createLayer failed', err)
+        return null
+      }
+      return boreanOverlayLayer
+    }
+
+    /* Only layer.remove — do not call .destroy() after remove (double-free can corrupt WASM). */
+    function boreanRemoveAlt30 () {
+      var lay = boreanOverlayLayer
+      if (!boreanAlt30Geo) return
+      if (lay) { try { lay.remove(boreanAlt30Geo) } catch (_) {} }
+      boreanAlt30Geo = null
+    }
+
+    function boreanRemoveTraj () {
+      var lay = boreanOverlayLayer
+      if (!boreanTrajGeo) return
+      if (lay) { try { lay.remove(boreanTrajGeo) } catch (_) {} }
+      boreanTrajGeo = null
+    }
+
+    function boreanSelId (sel) {
+      try { return String(sel && sel.id != null ? sel.id : '') } catch (_) { return '' }
+    }
+
+    function boreanIsSatellite (sel) {
+      var id = boreanSelId(sel).toUpperCase()
+      return id.indexOf('NORAD') >= 0 || id.indexOf('TLE ') >= 0 || id.indexOf('SATELLITE') >= 0
+    }
+
+    /* Planets + Sun/Moon + major moons: use multi-day ICRF orbit sample. */
+    function boreanIsPlanetLike (sel) {
+      var id = ' ' + boreanSelId(sel).toLowerCase() + ' '
+      var keys = [
+        ' mercury ', ' venus ', ' mars ', ' jupiter ', ' saturn ', ' uranus ', ' neptune ', ' pluto ',
+        ' sun ', ' moon ', ' io ', ' europa ', ' ganymede ', ' callisto ', ' titan ', ' mimas ',
+        ' enceladus ', ' dione ', ' rhea ', ' iapetus ', ' miranda ', ' ariel ', ' umbriel ',
+        ' titania ', ' oberon ', ' triton ', ' charon '
+      ]
+      for (var i = 0; i < keys.length; i++) {
+        if (id.indexOf(keys[i]) >= 0) return true
+      }
+      return false
+    }
+
+    /* Same geometry as core.lines.azimuthal: lines.c spherical_project uses
+     * vec3_from_sphe(az, alt) with alt = (v-0.5)*180° (horizon=0°, zenith=+90°).
+     * GeoJSON must use FRAME_OBSERVED + c2s(observed unit vector): if we converted
+     * to ICRF RA/Dec and drew with FRAME_ICRF, segments follow ICRF great circles
+     * and the polyline leaves the true altitude small circle — looks nothing like
+     * the native azimuthal 30° ring. */
+    function boreanBuildAlt30Coords () {
+      var coords = []
+      var alt = 30 * DD2R
+      for (var deg = 0; deg <= 360; deg += 1) {
+        var az = deg * DD2R
+        var ex = Math.cos(az) * Math.cos(alt)
+        var ny = Math.sin(az) * Math.cos(alt)
+        var zu = Math.sin(alt)
+        try {
+          if (!stel.c2s) continue
+          var s = stel.c2s([ex, ny, zu, 0])
+          if (!s || s.length < 2) continue
+          var londeg = s[0] * 180 / Math.PI
+          var latdeg = s[1] * 180 / Math.PI
+          coords.push([londeg, latdeg])
+        } catch (_) {}
+      }
+      return coords
+    }
+
+    function boreanInstallAlt30 () {
+      if (!boreanShowAlt30) {
+        boreanRemoveAlt30()
+        return
+      }
+      var lay = boreanEnsureLayer()
+      if (!lay) return
+      boreanRemoveAlt30()
+      var coords = boreanBuildAlt30Coords()
+      if (coords.length < 8) {
+        console.warn('[borean-stellarium] alt=30°: too few horizon samples (' + coords.length + ')')
+        return
+      }
+      try {
+        var g = stel.createObj('geojson', {})
+        g.data = {
+          type: 'FeatureCollection',
+          features: [{
+            type: 'Feature',
+            properties: {
+              stroke: [0.42, 0.78, 1.0],
+              stroke_width: 1.5,
+              fill: [0, 0, 0],
+              fill_opacity: 0,
+              stroke_opacity: 0.82
+            },
+            geometry: { type: 'LineString', coordinates: coords }
+          }]
+        }
+        g.frame = stel.FRAME_OBSERVED
+        lay.add(g)
+        boreanAlt30Geo = g
+      } catch (err) {
+        console.warn('[borean-stellarium] alt=30° geojson failed', err)
+      }
+    }
+
+    /* Advance ephemeris after mutating observer.utc: SweObj.update() only calls
+     * _module_update(..., 0) and does NOT run observer_update. getInfo('radec')
+     * always calls _observer_update(obs.v, true) first (see bundled engine). */
+    function boreanSyncObs (sel, obs) {
+      try {
+        if (!sel || typeof sel.getInfo !== 'function') return
+        sel.getInfo('radec')
+      } catch (_) {}
+    }
+
+    function boreanBuildTrajectoryCoords (sel) {
+      var obs = core.observer
+      if (!obs || !stel.convertFrame || !stel.c2s) return null
+      var planetLike = boreanIsPlanetLike(sel)
+      var steps = planetLike ? 160 : 96
+      var spanDays = planetLike ? 380 : 1.0
+      var utc0 = obs.utc
+      var coords = []
+      /* Fixed ICRF direction for deep-sky / stars; only the observer rotates. */
+      var vFix = null
+      if (!planetLike) {
+        try {
+          var p0 = sel.getInfo('radec')
+          if (p0 && p0.length >= 3) vFix = [p0[0], p0[1], p0[2], p0[3] || 0]
+        } catch (_) {}
+        if (!vFix) return null
+      }
+      try {
+        for (var i = 0; i <= steps; i++) {
+          obs.utc = utc0 + (spanDays * i) / steps
+          boreanSyncObs(sel, obs)
+          if (planetLike) {
+            var p = sel.getInfo('radec')
+            if (!p || p.length < 3) continue
+            var vI = [p[0], p[1], p[2], p[3] || 0]
+            var s = stel.c2s(vI)
+            var radeg = s[0] * 180 / Math.PI
+            if (radeg < 0) radeg += 360
+            coords.push([radeg, s[1] * 180 / Math.PI])
+          } else {
+            var vO = stel.convertFrame(obs, 'ICRF', 'OBSERVED', vFix)
+            var s2 = stel.c2s(vO)
+            coords.push([s2[0] * 180 / Math.PI, s2[1] * 180 / Math.PI])
+          }
+        }
+      } catch (err) {
+        console.warn('[borean-stellarium] trajectory sample failed', err)
+      } finally {
+        obs.utc = utc0
+        boreanSyncObs(sel, obs)
+      }
+      return coords
+    }
+
+    function boreanRefreshTrajectory () {
+      boreanRemoveTraj()
+      if (!boreanShowOrbit) return
+      var sel = core.selection
+      if (!sel || boreanIsSatellite(sel)) return
+      var coords = boreanBuildTrajectoryCoords(sel)
+      if (!coords || coords.length < 4) return
+      var lay = boreanEnsureLayer()
+      if (!lay) return
+      var planetLike = boreanIsPlanetLike(sel)
+      var features = [{
+        type: 'Feature',
+        properties: {
+          stroke: [0.95, 0.62, 0.18],
+          stroke_width: 2,
+          fill: [0, 0, 0],
+          fill_opacity: 0,
+          stroke_opacity: 0.88
+        },
+        geometry: { type: 'LineString', coordinates: coords }
+      }]
+      try {
+        var g = stel.createObj('geojson', {})
+        g.data = { type: 'FeatureCollection', features: features }
+        g.frame = planetLike ? stel.FRAME_ICRF : stel.FRAME_OBSERVED
+        lay.add(g)
+        boreanTrajGeo = g
+      } catch (err) {
+        console.warn('[borean-stellarium] trajectory geojson failed', err)
+      }
+    }
+
+    function boreanScheduleTraj () {
+      if (!boreanShowOrbit) return
+      if (boreanTrajTimer) clearTimeout(boreanTrajTimer)
+      boreanTrajTimer = setTimeout(function () {
+        boreanTrajTimer = null
+        boreanRefreshTrajectory()
+      }, 120)
+    }
+
+    function boreanOnAtlasOverlayMessage (data) {
+      if (!data || typeof data !== 'object') return
+      if (data.source !== 'borean-atlas') return
+      if (data.type === 'overlay-alt30') {
+        boreanShowAlt30 = data.visible === true
+        if (boreanShowAlt30) boreanInstallAlt30()
+        else boreanRemoveAlt30()
+        return
+      }
+      if (data.type === 'overlay-orbit') {
+        boreanShowOrbit = data.visible === true
+        if (!boreanShowOrbit) {
+          if (boreanTrajTimer) clearTimeout(boreanTrajTimer)
+          boreanTrajTimer = null
+          boreanRemoveTraj()
+        } else {
+          boreanScheduleTraj()
+        }
+      }
+    }
+    try {
+      window.addEventListener('message', function (ev) {
+        try {
+          boreanOnAtlasOverlayMessage(ev.data)
+        } catch (_) {}
+      })
+    } catch (_) {}
+
+    setTimeout(function () {
+      try {
+        boreanPostSelectionInfo()
+      } catch (_) {}
+    }, 400)
+
+    /* Double-click to center and track: the engine's own single-click handler already writes
+     * the picked obj into core.selection (movements.c calls core_get_obj_at(x,y,18)).
+     * dblclick fires after two clicks, so by the time this runs, selection is already set. */
+    try {
+      canvas.addEventListener('dblclick', function () {
+        try {
+          var sel = window.stel && window.stel.core && window.stel.core.selection
+          if (sel && typeof window.stel.pointAndLock === 'function') {
+            window.stel.pointAndLock(sel, 1.0)
+          }
+        } catch (err) { console.warn('[borean-stellarium] dblclick pointAndLock failed', err) }
+      })
+    } catch (_) {}
+  }
+
+  try {
+    var result = StelWebEngine({
+      wasmFile: '/stellarium/js/stellarium-web-engine.wasm',
+      canvas: canvas,
+      translateFn: function (_domain, str) { return str },
+      onReady: function (stel) { initStel(stel) },
+    })
+    if (result && typeof result.then === 'function') {
+      result.then(
+        function (stel) { initStel(stel) },
+        function (err) { console.error('[borean-stellarium] StelWebEngine promise rejected', err) },
+      )
+    }
+  } catch (err) {
+    console.error('[borean-stellarium] StelWebEngine constructor threw', err)
+  }
+})()
+</script>
+</body>
+</html>

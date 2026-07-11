@@ -1,0 +1,242 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 238, 233, 220;
+  --background-rgb: 8, 9, 10;
+  --muted-rgb: 157, 160, 167;
+  --surface-rgb: 21, 22, 22;
+  --line: rgba(255, 255, 255, 0.14);
+  --glass-bg: rgba(255, 255, 255, 0.04);
+  --glass-bg-hover: rgba(255, 255, 255, 0.07);
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: rgb(var(--background-rgb));
+    color: rgb(var(--foreground-rgb));
+    font-family: 'SF Pro Text', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Helvetica Neue',
+      Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    letter-spacing: 0.01em;
+  }
+}
+
+@layer components {
+  .glass-panel,
+  .glass-card {
+    @apply rounded-2xl border-0 backdrop-blur-md transition-colors duration-300;
+    background-color: var(--glass-bg);
+  }
+
+  .glass-card:hover {
+    background-color: var(--glass-bg-hover);
+  }
+
+  .glass-inset {
+    @apply rounded-xl backdrop-blur-md;
+    background-color: rgba(255, 255, 255, 0.03);
+  }
+
+  .glass-field {
+    @apply rounded-lg border-0 backdrop-blur-md px-3 py-2 text-fg;
+    background-color: rgba(255, 255, 255, 0.04);
+  }
+
+  .section-heading {
+    @apply font-display text-3xl font-semibold tracking-tight text-fg md:text-4xl;
+  }
+
+  .panel-placeholder {
+    @apply rounded-2xl border border-white/15 bg-surface;
+  }
+
+  .product-frame-wrap {
+    @apply relative;
+  }
+
+  .product-frame {
+    @apply relative w-full overflow-hidden rounded-2xl bg-surface;
+    box-shadow:
+      0 40px 120px -50px rgba(0, 0, 0, 0.95),
+      0 0 0 1px rgba(255, 255, 255, 0.03) inset;
+  }
+
+  /*
+   * Gradient rim instead of a flat `border-white/10`. A uniform border reads as a
+   * hard full-width seam where the dark hero meets the bright screenshot. This
+   * fades the edge so the frame emerges from the background: brightest mid-sides,
+   * very faint at the very top so there's no obvious dividing line.
+   */
+  .product-frame::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.04) 0%,
+      rgba(255, 255, 255, 0.12) 22%,
+      rgba(255, 255, 255, 0.08) 70%,
+      rgba(255, 255, 255, 0.05) 100%
+    );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  .product-frame-placeholder {
+    @apply absolute inset-0 flex items-center justify-center;
+    background-image: linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.05) 0%,
+      rgba(255, 255, 255, 0.01) 45%,
+      rgba(255, 255, 255, 0.04) 100%
+    );
+  }
+
+  .product-frame-placeholder-label {
+    @apply max-w-[80%] text-center text-sm leading-relaxed text-muted/75;
+  }
+
+  .hub-connector {
+    @apply relative overflow-hidden;
+    background: rgba(255, 255, 255, 0.12);
+  }
+
+  .hub-connector-h {
+    @apply h-px w-10 lg:w-16;
+  }
+
+  .hub-connector-v {
+    @apply my-1 h-8 w-px self-center;
+  }
+
+  .hub-connector::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      rgba(150, 180, 240, 0) 0%,
+      rgba(150, 180, 240, 0.9) 50%,
+      rgba(150, 180, 240, 0) 100%
+    );
+    animation: hub-flow 2.4s linear infinite;
+  }
+
+  .hub-connector-v::after {
+    background: linear-gradient(
+      180deg,
+      rgba(150, 180, 240, 0) 0%,
+      rgba(150, 180, 240, 0.9) 50%,
+      rgba(150, 180, 240, 0) 100%
+    );
+    animation: hub-flow-v 2.4s linear infinite;
+  }
+
+  .checkout-billing-card {
+    @apply cursor-pointer border border-transparent;
+  }
+
+  .checkout-billing-card-active {
+    border-color: rgba(255, 255, 255, 0.28);
+    background-color: rgba(255, 255, 255, 0.07);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06) inset;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center rounded-full border border-white/25 bg-surface px-8 py-3 text-sm font-semibold text-fg transition hover:bg-[#1b1c1c];
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center rounded-full border border-white/25 bg-transparent px-8 py-3 text-sm font-medium text-fg transition hover:bg-surface;
+  }
+
+  .text-link {
+    @apply text-fg underline-offset-4 transition hover:text-white hover:underline;
+  }
+
+  .label-caps {
+    @apply text-sm font-medium uppercase tracking-[0.18em] text-muted;
+  }
+
+  .page-shell {
+    @apply mx-auto w-full max-w-[1360px] px-5 sm:px-8 lg:px-10;
+  }
+
+  .page-shell-narrow {
+    @apply mx-auto w-full max-w-3xl px-5 sm:px-8;
+  }
+
+  .page-shell-checkout {
+    @apply mx-auto w-full max-w-4xl px-5 sm:px-8;
+  }
+
+  .page-shell-form {
+    @apply mx-auto w-full max-w-lg px-5 sm:px-8;
+  }
+
+  .client-marquee-track {
+    animation: client-marquee 42s linear infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .client-marquee-track {
+      animation: none;
+      flex-wrap: wrap;
+      width: auto;
+      justify-content: center;
+    }
+
+    .hub-connector::after {
+      animation: none;
+    }
+  }
+
+  .plan-callout-edge {
+    stroke: rgba(255, 255, 255, 0.14);
+    stroke-width: 1;
+  }
+
+  .scheduler-web-edge {
+    stroke: rgba(255, 255, 255, 0.1);
+    stroke-width: 1;
+  }
+}
+
+@keyframes client-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes hub-flow {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes hub-flow-v {
+  from {
+    transform: translateY(-100%);
+  }
+  to {
+    transform: translateY(100%);
+  }
+}

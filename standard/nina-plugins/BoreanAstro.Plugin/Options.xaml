@@ -1,0 +1,21 @@
+<ResourceDictionary
+    x:Class="BoreanAstro.Plugin.Options"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <DataTemplate x:Key="BoreanAstro.Plugin_Options">
+        <StackPanel Orientation="Vertical">
+            <Label Content="Borean Astro" FontWeight="Bold" Margin="0,4,0,0" />
+            <TextBlock Text="Reads license from %LOCALAPPDATA%\BoreanAstro\tenant.json on startup." TextWrapping="Wrap" Margin="0,4,0,0" Opacity="0.85" />
+            <CheckBox Content="Enable mount pointing telemetry" IsChecked="{Binding TelemetryEnabled}" Margin="0,8,0,0" />
+            <Button Content="Reload license from tenant.json" Margin="0,8,0,0" HorizontalAlignment="Left" Click="OnReloadLicenseClick" />
+            <Label Content="POST URL (your hub /api/personal/…/imaging/mount-pointing)" Margin="0,8,0,0" />
+            <TextBox Text="{Binding ApiEndpoint, UpdateSourceTrigger=PropertyChanged}" MinWidth="400" />
+            <Label Content="Minimum interval between POSTs (ms)" Margin="0,8,0,0" />
+            <TextBox Text="{Binding PostIntervalMilliseconds, UpdateSourceTrigger=PropertyChanged}" MinWidth="120" HorizontalAlignment="Left" />
+            <Label Content="Bearer secret (from tenant.json apiSecret)" Margin="0,8,0,0" />
+            <TextBox Text="{Binding SharedSecret, UpdateSourceTrigger=PropertyChanged}" MinWidth="400" />
+            <Label Content="Station ID (optional; separates multiple mounts)" Margin="0,8,0,0" />
+            <TextBox Text="{Binding StationId, UpdateSourceTrigger=PropertyChanged}" MinWidth="200" HorizontalAlignment="Left" />
+        </StackPanel>
+    </DataTemplate>
+</ResourceDictionary>

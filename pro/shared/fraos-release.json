@@ -1,0 +1,26 @@
+{
+  "channel": "stable",
+  "station": {
+    "latestVersion": "0.1.8",
+    "downloadUrlWindows": "https://YOUR_DOMAIN/releases/borean-station-0.1.8-windows-setup.exe",
+    "releaseNotes": "Trust Mozilla CA bundle for Cloudflare/Google Trust certs (observatory Windows lacks GTS root; Let's Encrypt/Pomfret worked). Station UI uses rustls+webpki-roots."
+  },
+  "control": {
+    "latestVersion": "0.1.23",
+    "downloadUrlWindows": "https://YOUR_DOMAIN/releases/borean-control-0.1.23-windows-setup.exe",
+    "downloadUrlMac": "https://YOUR_DOMAIN/releases/borean-control-0.1.23-macos.dmg",
+    "releaseNotes": "Project Mode check progress and per sub-session edit status overlays. Imaging Dashboard layout cleanup. Observatory local time DST fix.",
+    "editions": {
+      "standard": {
+        "downloadUrlWindows": "https://YOUR_DOMAIN/releases/borean-control-0.1.23-windows-setup.exe",
+        "downloadUrlMac": "https://YOUR_DOMAIN/releases/borean-control-0.1.23-macos.dmg"
+      },
+      "pro": {
+        "downloadUrlMac": "https://YOUR_DOMAIN/releases/borean-control-pro-0.1.23-macos.dmg"
+      },
+      "max": {
+        "downloadUrlMac": "https://YOUR_DOMAIN/releases/borean-control-max-0.1.23-macos.dmg"
+      }
+    }
+  }
+}

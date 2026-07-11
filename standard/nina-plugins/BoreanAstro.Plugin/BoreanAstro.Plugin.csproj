@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <OutputType>Library</OutputType>
+    <RootNamespace>BoreanAstro.Plugin</RootNamespace>
+    <AssemblyName>BoreanAstro.Plugin</AssemblyName>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <UseWPF>true</UseWPF>
+    <ImportWindowsDesktopTargets>true</ImportWindowsDesktopTargets>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <Nullable>enable</Nullable>
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="NINA.Plugin" Version="3.0.0.1085-nightly" />
+  </ItemGroup>
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Command="if $(ConfigurationName) == Debug (&#xD;&#xA;&#xD;&#xA;if not exist &quot;%25localappdata%25\NINA\Plugins&quot; (&#xD;&#xA;  mkdir &quot;%25localappdata%25\NINA\Plugins&quot;&#xD;&#xA;)&#xD;&#xA;if not exist &quot;%25localappdata%25\NINA\Plugins\3.0.0&quot; (&#xD;&#xA;  mkdir &quot;%25localappdata%25\NINA\Plugins\3.0.0&quot;&#xD;&#xA;)&#xD;&#xA;if not exist &quot;%25localappdata%25\NINA\Plugins\3.0.0\$(ProjectName)&quot; (&#xD;&#xA;  mkdir &quot;%25localappdata%25\NINA\Plugins\3.0.0\$(ProjectName)&quot;&#xD;&#xA;)&#xD;&#xA;echo Copying $(TargetFileName)&#xD;&#xA;xcopy &quot;$(TargetPath)&quot; &quot;%25localappdata%25\NINA\Plugins\3.0.0\$(ProjectName)&quot; /h/i/c/k/e/r/y&#xD;&#xA;)&#xD;&#xA;" />
+  </Target>
+</Project>

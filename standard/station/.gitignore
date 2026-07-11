@@ -1,0 +1,5 @@
+node_modules/
+dist/
+src-tauri/target/
+nina-plugin-bundle/BoreanAstro.Plugin/*
+!nina-plugin-bundle/BoreanAstro.Plugin/.gitkeep

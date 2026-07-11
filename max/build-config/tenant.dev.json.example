@@ -1,0 +1,7 @@
+{
+  "tenantId": "YOUR_TENANT_ID",
+  "apiBaseUrl": "http://127.0.0.1:7841",
+  "apiSecret": "YOUR_API_SECRET",
+  "displayName": "Development",
+  "plan": "max"
+}

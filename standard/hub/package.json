@@ -1,0 +1,29 @@
+{
+  "name": "@boreanastro/personal-hub",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Borean Astro FRAOS Standard — embedded local Hub API",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "start": "node dist/server.js",
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.8.1",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "tz-lookup": "^6.1.25",
+    "uuid": "^11.1.0"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/cors": "^2.8.17",
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.13.10",
+    "@types/tz-lookup": "^6.1.2",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.2"
+  }
+}

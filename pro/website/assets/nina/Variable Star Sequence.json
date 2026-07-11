@@ -1,0 +1,1108 @@
+{
+  "$id": "1",
+  "$type": "NINA.Sequencer.Container.SequenceRootContainer, NINA.Sequencer",
+  "Strategy": {
+    "$type": "NINA.Sequencer.Container.ExecutionStrategy.SequentialStrategy, NINA.Sequencer"
+  },
+  "Name": "Variable Star Sequence",
+  "Conditions": {
+    "$id": "2",
+    "$type": "System.Collections.ObjectModel.ObservableCollection`1[[NINA.Sequencer.Conditions.ISequenceCondition, NINA.Sequencer]], System.ObjectModel",
+    "$values": []
+  },
+  "IsExpanded": true,
+  "Items": {
+    "$id": "3",
+    "$type": "System.Collections.ObjectModel.ObservableCollection`1[[NINA.Sequencer.SequenceItem.ISequenceItem, NINA.Sequencer]], System.ObjectModel",
+    "$values": [
+      {
+        "$id": "4",
+        "$type": "NINA.Sequencer.Container.StartAreaContainer, NINA.Sequencer",
+        "Strategy": {
+          "$type": "NINA.Sequencer.Container.ExecutionStrategy.SequentialStrategy, NINA.Sequencer"
+        },
+        "Name": "Start",
+        "Conditions": {
+          "$id": "5",
+          "$type": "System.Collections.ObjectModel.ObservableCollection`1[[NINA.Sequencer.Conditions.ISequenceCondition, NINA.Sequencer]], System.ObjectModel",
+          "$values": []
+        },
+        "IsExpanded": true,
+        "Items": {
+          "$id": "6",
+          "$type": "System.Collections.ObjectModel.ObservableCollection`1[[NINA.Sequencer.SequenceItem.ISequenceItem, NINA.Sequencer]], System.ObjectModel",
+          "$values": [
+            {
+              "$id": "7",
+              "$type": "NINA.Sequencer.SequenceItem.Connect.ConnectEquipment, NINA.Sequencer",
+              "SelectedDevice": "Camera",
+              "Parent": {
+                "$ref": "4"
+              },
+              "ErrorBehavior": 2,
+              "Attempts": 1
+            },
+            {
+              "$id": "8",
+              "$type": "DaleGhent.NINA.GroundStation.HTTP.HttpClient, DaleGhent.NINA.GroundStation",
+              "HttpMethod": 1,
+              "HttpUri": "https://www.pomfretastro.org/api/imaging/session-progress",
+              "HttpPostContentType": "text/plain",
+              "HttpPostBody": "Camera Connected\r\n",
+              "HttpClientDescription": "",
+              "HttpAuthUsername": "pomfretastro",
+              "HttpAuthPassword": "1894",
+              "Parent": {
+                "$ref": "4"
+              },
+              "ErrorBehavior": 0,
+              "Attempts": 1
+            },
+            {
+              "$id": "9",
+              "$type": "NINA.Sequencer.SequenceItem.Connect.ConnectEquipment, NINA.Sequencer",
+              "SelectedDevice": "Mount",
+              "Parent": {
+                "$ref": "4"
+              },
+              "ErrorBehavior": 2,
+              "Attempts": 1
+            },
+            {
+              "$id": "10",
+              "$type": "DaleGhent.NINA.GroundStation.HTTP.HttpClient, DaleGhent.NINA.GroundStation",
+              "HttpMethod": 1,
+              "HttpUri": "https://www.pomfretastro.org/api/imaging/session-progress",
+              "HttpPostContentType": "text/plain",
+              "HttpPostBody": "Mount Connected\r\n\r\n",
+              "HttpClientDescription": "",
+              "HttpAuthUsername": "pomfretastro",
+              "HttpAuthPassword": "1894",
+              "Parent": {
+                "$ref": "4"
+              },
+              "ErrorBehavior": 0,
+              "Attempts": 1
+            },
+            {
+              "$id": "11",
+              "$type": "NINA.Sequencer.SequenceItem.Connect.ConnectEquipment, NINA.Sequencer",
+              "SelectedDevice": "Dome",
+              "Parent": {
+                "$ref": "4"
+              },
+              "ErrorBehavior": 2,
+              "Attempts": 1
+            },
+            {
+              "$id": "12",
+              "$type": "DaleGhent.NINA.GroundStation.HTTP.HttpClient, DaleGhent.NINA.GroundStation",
+              "HttpMethod": 1,
+              "HttpUri": "https://www.pomfretastro.org/api/imaging/session-progress",
+              "HttpPostContentType": "text/plain",
+              "HttpPostBody": "Dome Connected\r\n\r\n",
+              "HttpClientDescription": "",
+              "HttpAuthUsername": "pomfretastro",
+              "HttpAuthPassword": "1894",
+              "Parent": {
+                "$ref": "4"
+              },
+              "ErrorBehavior": 0,
+              "Attempts": 1
+            },
+            {
+              "$id": "13",
+              "$type": "DaleGhent.NINA.GroundStation.HTTP.HttpClient, DaleGhent.NINA.GroundStation",
+              "HttpMethod": 1,
+              "HttpUri": "https://www.pomfretastro.org/api/imaging/session-progress",
+              "HttpPostContentType": "text/plain",
+              "HttpPostBody": "Cooling Camera\r\n",
+              "HttpClientDescription": "",
+              "HttpAuthUsername": "pomfretastro",
+              "HttpAuthPassword": "1894",
+              "Parent": {
+                "$ref": "4"
+              },
+              "ErrorBehavior": 0,
+              "Attempts": 1
+            },
+            {
+              "$id": "14",
+              "$type": "DaleGhent.NINA.GroundStation.HTTP.HttpClient, DaleGhent.NINA.GroundStation",
+              "HttpMethod": 1,
+              "HttpUri": "https://www.pomfretastro.org/api/imaging/session-progress",
+              "HttpPostContentType": "text/plain",
+              "HttpPostBody": "Opening Dome\r\n",
+              "HttpClientDescription": "",
+              "HttpAuthUsername": "pomfretastro",
+              "HttpAuthPassword": "1894",
+              "Parent": {
+                "$ref": "4"
+              },
+              "ErrorBehavior": 0,
+              "Attempts": 1
+            },
+            {
+              "$id": "15",
+              "$type": "NINA.Sequencer.Container.ParallelContainer, NINA.Sequencer",
+              "Strategy": {
+                "$type": "NINA.Sequencer.Container.ExecutionStrategy.ParallelStrategy, NINA.Sequencer"
+              },
+              "Name": "Parallel Instruction Set",
+              "Conditions": {
+                "$id": "16",
+                "$type": "System.Collections.ObjectModel.ObservableCollection`1[[NINA.Sequencer.Conditions.ISequenceCondition, NINA.Sequencer]], System.ObjectModel",
+                "$values": []
+              },
+              "IsExpanded": true,
+              "Items": {
+                "$id": "17",
+                "$type": "System.Collections.ObjectModel.ObservableCollection`1[[NINA.Sequencer.SequenceItem.ISequenceItem, NINA.Sequencer]], System.ObjectModel",
+                "$values": [
+                  {
+                    "$id": "18",
+                    "$type": "NINA.Sequencer.SequenceItem.Connect.ConnectEquipment, NINA.Sequencer",
+                    "SelectedDevice": "Weather",
+                    "Parent": {
+                      "$ref": "15"
+                    },
+                    "ErrorBehavior": 0,
+                    "Attempts": 1
+                  },
+                  {
+                    "$id": "19",
+                    "$type": "NINA.Sequencer.SequenceItem.Connect.ConnectEquipment, NINA.Sequencer",
+                    "SelectedDevice": "Focuser",
+                    "Parent": {
+                      "$ref": "15"
+                    },
+                    "ErrorBehavior": 2,
+                    "Attempts": 1
+                  },
+                  {
+                    "$id": "20",
+                    "$type": "NINA.Sequencer.SequenceItem.Connect.ConnectEquipment, NINA.Sequencer",
+                    "SelectedDevice": "Guider",
+                    "Parent": {
+                      "$ref": "15"
+                    },
+                    "ErrorBehavior": 2,
+                    "Attempts": 1
+                  },
+                  {
+                    "$id": "21",
+                    "$type": "NINA.Sequencer.SequenceItem.Camera.CoolCamera, NINA.Sequencer",
+                    "Temperature": -10.0,
+                    "Duration": 10.0,
+                    "Parent": {
+                      "$ref": "15"
+                    },
+                    "ErrorBehavior": 2,
+                    "Attempts": 1
+                  },
+                  {
+                    "$id": "22",
+                    "$type": "NINA.Sequencer.SequenceItem.Connect.ConnectEquipment, NINA.Sequencer",
+                    "SelectedDevice": "Filter Wheel",
+                    "Parent": {
+                      "$ref": "15"
+                    },
+                    "ErrorBehavior": 2,
+                    "Attempts": 1
+                  },
+                  {
+                    "$id": "23",
+                    "$type": "NINA.Sequencer.SequenceItem.Dome.OpenDomeShutter, NINA.Sequencer",
+                    "Parent": {
+                      "$ref": "15"
+                    },
+                    "ErrorBehavior": 2,
+                    "Attempts": 1
+                  }
+                ]
+              },
+              "Triggers": {
+                "$id": "24",
+                "$type": "System.Collections.ObjectModel.ObservableCollection`1[[NINA.Sequencer.Trigger.ISequenceTrigger, NINA.Sequencer]], System.ObjectModel",
+                "$values": []
+              },
+              "Parent": {
+                "$ref": "4"
+              },
+              "ErrorBehavior": 0,
+              "Attempts": 1
+            },
+            {
+              "$id": "25",
+              "$type": "NINA.Sequencer.SequenceItem.Dome.EnableDomeSynchronization, NINA.Sequencer",
+              "Parent": {
+                "$ref": "4"
+              },
+              "ErrorBehavior": 0,
+              "Attempts": 1
+            },
+            {
+              "$id": "26",
+              "$type": "DaleGhent.NINA.GroundStation.HTTP.HttpClient, DaleGhent.NINA.GroundStation",
+              "HttpMethod": 1,
+              "HttpUri": "https://www.pomfretastro.org/api/imaging/session-progress",
+              "HttpPostContentType": "text/plain",
+              "HttpPostBody": "Guider Connected\r\n\r\n\r\n\r\n",
+              "HttpClientDescription": "",
+              "HttpAuthUsername": "pomfretastro",
+              "HttpAuthPassword": "1894",
+              "Parent": {
+                "$ref": "4"
+              },
+              "ErrorBehavior": 0,
+              "Attempts": 1
+            },
+            {
+              "$id": "27",
+              "$type": "DaleGhent.NINA.GroundStation.HTTP.HttpClient, DaleGhent.NINA.GroundStation",
+              "HttpMethod": 1,
+              "HttpUri": "https://www.pomfretastro.org/api/imaging/session-progress",
+              "HttpPostContentType": "text/plain",
+              "HttpPostBody": "Focuser Connected\r\n\r\n\r\n\r\n",
+              "HttpClientDescription": "",
+              "HttpAuthUsername": "pomfretastro",
+              "HttpAuthPassword": "1894",
+              "Parent": {
+                "$ref": "4"
+              },
+              "ErrorBehavior": 0,
+              "Attempts": 1
+            },
+            {
+              "$id": "28",
+              "$type": "DaleGhent.NINA.GroundStation.HTTP.HttpClient, DaleGhent.NINA.GroundStation",
+              "HttpMethod": 1,
+              "HttpUri": "https://www.pomfretastro.org/api/imaging/session-progress",
+              "HttpPostContentType": "text/plain",
+              "HttpPostBody": "Weather Connected\r\n\r\n\r\n",
+              "HttpClientDescription": "",
+              "HttpAuthUsername": "pomfretastro",
+              "HttpAuthPassword": "1894",
+              "Parent": {
+                "$ref": "4"
+              },
+              "ErrorBehavior": 0,
+              "Attempts": 1
+            },
+            {
+              "$id": "29",
+              "$type": "DaleGhent.NINA.GroundStation.HTTP.HttpClient, DaleGhent.NINA.GroundStation",
+              "HttpMethod": 1,
+              "HttpUri": "https://www.pomfretastro.org/api/imaging/session-progress",
+              "HttpPostContentType": "text/plain",
+              "HttpPostBody": "Camera Cooled",
+              "HttpClientDescription": "",
+              "HttpAuthUsername": "pomfretastro",
+              "HttpAuthPassword": "1894",
+              "Parent": {
+                "$ref": "4"
+              },
+              "ErrorBehavior": 0,
+              "Attempts": 1
+            },
+            {
+              "$id": "30",
+              "$type": "DaleGhent.NINA.GroundStation.HTTP.HttpClient, DaleGhent.NINA.GroundStation",
+              "HttpMethod": 1,
+              "HttpUri": "https://www.pomfretastro.org/api/imaging/session-progress",
+              "HttpPostContentType": "text/plain",
+              "HttpPostBody": "Dome Opened",
+              "HttpClientDescription": "",
+              "HttpAuthUsername": "pomfretastro",
+              "HttpAuthPassword": "1894",
+              "Parent": {
+                "$ref": "4"
+              },
+              "ErrorBehavior": 0,
+              "Attempts": 1
+            },
+            {
+              "$id": "31",
+              "$type": "NINA.DiscordAlert.DiscordAlertSequenceItems.DiscordMessageInstruction, Discord Alert",
+              "Text": "All Equipments Successfully Connected And Ready",
+              "Parent": {
+                "$ref": "4"
+              },
+              "ErrorBehavior": 0,
+              "Attempts": 1
+            }
+          ]
+        },
+        "Triggers": {
+          "$id": "32",
+          "$type": "System.Collections.ObjectModel.ObservableCollection`1[[NINA.Sequencer.Trigger.ISequenceTrigger, NINA.Sequencer]], System.ObjectModel",
+          "$values": []
+        },
+        "Parent": {
+          "$ref": "1"
+        },
+        "ErrorBehavior": 0,
+        "Attempts": 1
+      },
+      {
+        "$id": "33",
+        "$type": "NINA.Sequencer.Container.TargetAreaContainer, NINA.Sequencer",
+        "Strategy": {
+          "$type": "NINA.Sequencer.Container.ExecutionStrategy.SequentialStrategy, NINA.Sequencer"
+        },
+        "Name": "Targets",
+        "Conditions": {
+          "$id": "34",
+          "$type": "System.Collections.ObjectModel.ObservableCollection`1[[NINA.Sequencer.Conditions.ISequenceCondition, NINA.Sequencer]], System.ObjectModel",
+          "$values": []
+        },
+        "IsExpanded": true,
+        "Items": {
+          "$id": "35",
+          "$type": "System.Collections.ObjectModel.ObservableCollection`1[[NINA.Sequencer.SequenceItem.ISequenceItem, NINA.Sequencer]], System.ObjectModel",
+          "$values": [
+            {
+              "$id": "36",
+              "$type": "NINA.Plugin.ExoPlanets.Sequencer.Container.ExoPlanetObjectContainer, ExoPlanets",
+              "SelectedExoPlanet": null,
+              "ExoPlanetDSO": {
+                "$id": "37",
+                "$type": "NINA.Plugin.ExoPlanets.Model.ExoPlanetDeepSkyObject, ExoPlanets",
+                "ObservationStart": "0001-01-01T00:00:00",
+                "ObservationEnd": "0001-01-01T00:00:00",
+                "LightCurve": {
+                  "$id": "38",
+                  "$type": "System.Collections.Generic.List`1[[OxyPlot.DataPoint, OxyPlot]], System.Private.CoreLib",
+                  "$values": []
+                },
+                "ReferenceDate": "2026-05-02T12:00:00-04:00",
+                "Moon": {
+                  "$type": "NINA.Astrometry.MoonInfo, NINA.Astrometry",
+                  "Coordinates": {
+                    "$id": "39",
+                    "$type": "NINA.Astrometry.Coordinates, NINA.Astrometry",
+                    "RA": 0.0,
+                    "RAString": "00:00:00",
+                    "RADegrees": 0.0,
+                    "Dec": 0.0,
+                    "DecString": "00° 00' 00\"",
+                    "Epoch": 2,
+                    "DateTime": {
+                      "$type": "NINA.Core.Utility.SystemDateTime, NINA.Core",
+                      "Now": "2026-05-02T12:19:36.3939288-04:00",
+                      "UtcNow": "2026-05-02T16:19:36.3940506Z",
+                      "MinValue": "0001-01-01T00:00:00",
+                      "MaxValue": "9999-12-31T23:59:59.9999999"
+                    }
+                  },
+                  "MaxAltitude": {
+                    "$id": "40",
+                    "$type": "OxyPlot.DataPoint, OxyPlot",
+                    "X": 0.0,
+                    "Y": 0.0
+                  },
+                  "DataPoints": null,
+                  "Separation": 0.0,
+                  "SeparationText": null,
+                  "DisplayMoon": false,
+                  "Phase": 1,
+                  "Color": "#0FF0F0F0"
+                },
+                "Coordinates": {
+                  "$ref": "39"
+                },
+                "ShiftTrackingRate": {
+                  "$type": "NINA.Astrometry.SiderealShiftTrackingRate, NINA.Astrometry",
+                  "Enabled": false,
+                  "RASecondsPerSiderealSecond": 0.0,
+                  "RADegreesPerHour": 0.0,
+                  "DecDegreesPerHour": 0.0,
+                  "RAArcsecsPerHour": 0.0,
+                  "DecArcsecsPerHour": 0.0,
+                  "RAArcsecsPerSec": 0.0,
+                  "DecArcsecsPerSec": 0.0
+                },
+                "Id": "",
+                "Name": "",
+                "NameAsAscii": "",
+                "DSOType": null,
+                "Constellation": null,
+                "Magnitude": null,
+                "PositionAngle": null,
+                "SizeMin": null,
+                "Size": null,
+                "SurfaceBrightness": null,
+                "Rotation": 0.0,
+                "RotationPositionAngle": 0.0,
+                "MaxAltitude": {
+                  "$type": "OxyPlot.DataPoint, OxyPlot",
+                  "X": 0.0,
+                  "Y": 0.0
+                },
+                "Altitudes": {
+                  "$type": "System.Collections.Generic.List`1[[OxyPlot.DataPoint, OxyPlot]], System.Private.CoreLib",
+                  "$values": []
+                },
+                "Horizon": {
+                  "$type": "System.Collections.Generic.List`1[[OxyPlot.DataPoint, OxyPlot]], System.Private.CoreLib",
+                  "$values": []
+                },
+                "AlsoKnownAs": {
+                  "$id": "41",
+                  "$type": "System.Collections.Generic.List`1[[System.String, System.Private.CoreLib]], System.Private.CoreLib",
+                  "$values": []
+                },
+                "DoesTransitSouth": false,
+                "Image": null
+              },
+              "ExoPlanetInputTarget": {
+                "$id": "42",
+                "$type": "NINA.Plugin.ExoPlanets.Model.ExoPlanetInputTarget, ExoPlanets",
+                "Expanded": true,
+                "TargetName": null,
+                "PositionAngle": 0.0,
+                "InputCoordinates": {
+                  "$id": "43",
+                  "$type": "NINA.Astrometry.InputCoordinates, NINA.Astrometry",
+                  "RAHours": 0,
+                  "RAMinutes": 0,
+                  "RASeconds": 0.0,
+                  "NegativeDec": false,
+                  "DecDegrees": 0,
+                  "DecMinutes": 0,
+                  "DecSeconds": 0.0
+                }
+              },
+              "Target": {
+                "$ref": "42"
+              },
+              "Strategy": {
+                "$type": "NINA.Sequencer.Container.ExecutionStrategy.SequentialStrategy, NINA.Sequencer"
+              },
+              "Name": "Deep Sky Object Instruction Set",
+              "Conditions": {
+                "$id": "44",
+                "$type": "System.Collections.ObjectModel.ObservableCollection`1[[NINA.Sequencer.Conditions.ISequenceCondition, NINA.Sequencer]], System.ObjectModel",
+                "$values": []
+              },
+              "IsExpanded": true,
+              "Items": {
+                "$id": "45",
+                "$type": "System.Collections.ObjectModel.ObservableCollection`1[[NINA.Sequencer.SequenceItem.ISequenceItem, NINA.Sequencer]], System.ObjectModel",
+                "$values": [
+                  {
+                    "$id": "46",
+                    "$type": "DaleGhent.NINA.GroundStation.HTTP.HttpClient, DaleGhent.NINA.GroundStation",
+                    "HttpMethod": 1,
+                    "HttpUri": "https://www.pomfretastro.org/api/imaging/session-progress",
+                    "HttpPostContentType": "text/plain",
+                    "HttpPostBody": "Slewing To Target",
+                    "HttpClientDescription": "",
+                    "HttpAuthUsername": "pomfretastro",
+                    "HttpAuthPassword": "1894",
+                    "Parent": {
+                      "$ref": "36"
+                    },
+                    "ErrorBehavior": 0,
+                    "Attempts": 1
+                  },
+                  {
+                    "$id": "47",
+                    "$type": "NINA.Sequencer.SequenceItem.Platesolving.Center, NINA.Sequencer",
+                    "Inherited": true,
+                    "Coordinates": {
+                      "$id": "48",
+                      "$type": "NINA.Astrometry.InputCoordinates, NINA.Astrometry",
+                      "RAHours": 0,
+                      "RAMinutes": 0,
+                      "RASeconds": 0.0,
+                      "NegativeDec": false,
+                      "DecDegrees": 0,
+                      "DecMinutes": 0,
+                      "DecSeconds": 0.0
+                    },
+                    "Parent": {
+                      "$ref": "36"
+                    },
+                    "ErrorBehavior": 2,
+                    "Attempts": 1
+                  },
+                  {
+                    "$id": "49",
+                    "$type": "DaleGhent.NINA.GroundStation.HTTP.HttpClient, DaleGhent.NINA.GroundStation",
+                    "HttpMethod": 1,
+                    "HttpUri": "https://www.pomfretastro.org/api/imaging/session-progress",
+                    "HttpPostContentType": "text/plain",
+                    "HttpPostBody": "Target Centered",
+                    "HttpClientDescription": "",
+                    "HttpAuthUsername": "pomfretastro",
+                    "HttpAuthPassword": "1894",
+                    "Parent": {
+                      "$ref": "36"
+                    },
+                    "ErrorBehavior": 0,
+                    "Attempts": 1
+                  },
+                  {
+                    "$id": "50",
+                    "$type": "DaleGhent.NINA.GroundStation.HTTP.HttpClient, DaleGhent.NINA.GroundStation",
+                    "HttpMethod": 1,
+                    "HttpUri": "https://www.pomfretastro.org/api/imaging/session-progress",
+                    "HttpPostContentType": "text/plain",
+                    "HttpPostBody": "Switching Filter",
+                    "HttpClientDescription": "",
+                    "HttpAuthUsername": "pomfretastro",
+                    "HttpAuthPassword": "1894",
+                    "Parent": {
+                      "$ref": "36"
+                    },
+                    "ErrorBehavior": 0,
+                    "Attempts": 1
+                  },
+                  {
+                    "$id": "51",
+                    "$type": "NINA.Sequencer.SequenceItem.FilterWheel.SwitchFilter, NINA.Sequencer",
+                    "Filter": {
+                      "$id": "52",
+                      "$type": "NINA.Core.Model.Equipment.FilterInfo, NINA.Core",
+                      "_name": "G",
+                      "_focusOffset": 0,
+                      "_position": 5,
+                      "_autoFocusExposureTime": -1.0,
+                      "_autoFocusFilter": false,
+                      "FlatWizardFilterSettings": {
+                        "$id": "53",
+                        "$type": "NINA.Core.Model.Equipment.FlatWizardFilterSettings, NINA.Core",
+                        "FlatWizardMode": 0,
+                        "HistogramMeanTarget": 0.5,
+                        "HistogramTolerance": 0.1,
+                        "MaxFlatExposureTime": 80.0,
+                        "MinFlatExposureTime": 0.01,
+                        "MaxAbsoluteFlatDeviceBrightness": 250,
+                        "MinAbsoluteFlatDeviceBrightness": 0,
+                        "Gain": -1,
+                        "Offset": -1,
+                        "Binning": {
+                          "$id": "54",
+                          "$type": "NINA.Core.Model.Equipment.BinningMode, NINA.Core",
+                          "X": 1,
+                          "Y": 1
+                        }
+                      },
+                      "_autoFocusBinning": {
+                        "$id": "55",
+                        "$type": "NINA.Core.Model.Equipment.BinningMode, NINA.Core",
+                        "X": 1,
+                        "Y": 1
+                      },
+                      "_autoFocusGain": -1,
+                      "_autoFocusOffset": -1
+                    },
+                    "Parent": {
+                      "$ref": "36"
+                    },
+                    "ErrorBehavior": 2,
+                    "Attempts": 1
+                  },
+                  {
+                    "$id": "56",
+                    "$type": "DaleGhent.NINA.GroundStation.HTTP.HttpClient, DaleGhent.NINA.GroundStation",
+                    "HttpMethod": 1,
+                    "HttpUri": "https://www.pomfretastro.org/api/imaging/session-progress",
+                    "HttpPostContentType": "text/plain",
+                    "HttpPostBody": "Filter Switched To G",
+                    "HttpClientDescription": "",
+                    "HttpAuthUsername": "pomfretastro",
+                    "HttpAuthPassword": "1894",
+                    "Parent": {
+                      "$ref": "36"
+                    },
+                    "ErrorBehavior": 0,
+                    "Attempts": 1
+                  },
+                  {
+                    "$id": "57",
+                    "$type": "DaleGhent.NINA.GroundStation.HTTP.HttpClient, DaleGhent.NINA.GroundStation",
+                    "HttpMethod": 1,
+                    "HttpUri": "https://www.pomfretastro.org/api/imaging/session-progress",
+                    "HttpPostContentType": "text/plain",
+                    "HttpPostBody": "Calculating Proper Exposure Time",
+                    "HttpClientDescription": "",
+                    "HttpAuthUsername": "pomfretastro",
+                    "HttpAuthPassword": "1894",
+                    "Parent": {
+                      "$ref": "36"
+                    },
+                    "ErrorBehavior": 0,
+                    "Attempts": 1
+                  },
+                  {
+                    "$id": "58",
+                    "$type": "NINA.Plugin.ExoPlanets.Sequencer.Utility.CalculateExposureTime, ExoPlanets",
+                    "ExposureTime": 30.0,
+                    "ExposureTimeFirst": 30.0,
+                    "ExposureTimeSecond": 60.0,
+                    "ExposureTimeMax": 180.0,
+                    "Gain": -1,
+                    "Offset": 30,
+                    "Binning": {
+                      "$id": "59",
+                      "$type": "NINA.Core.Model.Equipment.BinningMode, NINA.Core",
+                      "X": 1,
+                      "Y": 1
+                    },
+                    "ExposureCount": 0,
+                    "TargetADU": 0.66,
+                    "SaveImages": false,
+                    "UpdateExposureTime": true,
+                    "Parent": {
+                      "$ref": "36"
+                    },
+                    "ErrorBehavior": 2,
+                    "Attempts": 1
+                  },
+                  {
+                    "$id": "60",
+                    "$type": "DaleGhent.NINA.GroundStation.HTTP.HttpClient, DaleGhent.NINA.GroundStation",
+                    "HttpMethod": 1,
+                    "HttpUri": "https://www.pomfretastro.org/api/imaging/session-progress",
+                    "HttpPostContentType": "text/plain",
+                    "HttpPostBody": "Exposure Time Calculated | Start Imaging",
+                    "HttpClientDescription": "",
+                    "HttpAuthUsername": "pomfretastro",
+                    "HttpAuthPassword": "1894",
+                    "Parent": {
+                      "$ref": "36"
+                    },
+                    "ErrorBehavior": 0,
+                    "Attempts": 1
+                  },
+                  {
+                    "$id": "61",
+                    "$type": "NINA.Plugin.ExoPlanets.Sequencer.Utility.WaitForTransit, ExoPlanets",
+                    "Hours": 11,
+                    "Minutes": 6,
+                    "MinutesOffset": 0,
+                    "Seconds": 9,
+                    "SelectedProvider": {
+                      "$id": "62",
+                      "$type": "NINA.Sequencer.Utility.DateTimeProvider.TimeProvider, NINA.Sequencer"
+                    },
+                    "Parent": {
+                      "$ref": "36"
+                    },
+                    "ErrorBehavior": 0,
+                    "Attempts": 1
+                  },
+                  {
+                    "$id": "63",
+                    "$type": "NINA.Sequencer.Container.SequentialContainer, NINA.Sequencer",
+                    "Strategy": {
+                      "$type": "NINA.Sequencer.Container.ExecutionStrategy.SequentialStrategy, NINA.Sequencer"
+                    },
+                    "Name": "Sequential Instruction Set",
+                    "Conditions": {
+                      "$id": "64",
+                      "$type": "System.Collections.ObjectModel.ObservableCollection`1[[NINA.Sequencer.Conditions.ISequenceCondition, NINA.Sequencer]], System.ObjectModel",
+                      "$values": [
+                        {
+                          "$id": "65",
+                          "$type": "NINA.Plugin.ExoPlanets.Sequencer.Conditions.TransitCondition, ExoPlanets",
+                          "Hours": 11,
+                          "Minutes": 6,
+                          "MinutesOffset": 0,
+                          "Seconds": 17,
+                          "SelectedProvider": {
+                            "$ref": "62"
+                          },
+                          "Parent": {
+                            "$ref": "63"
+                          }
+                        }
+                      ]
+                    },
+                    "IsExpanded": true,
+                    "Items": {
+                      "$id": "66",
+                      "$type": "System.Collections.ObjectModel.ObservableCollection`1[[NINA.Sequencer.SequenceItem.ISequenceItem, NINA.Sequencer]], System.ObjectModel",
+                      "$values": [
+                        {
+                          "$id": "67",
+                          "$type": "NINA.Sequencer.SequenceItem.Imaging.TakeExposure, NINA.Sequencer",
+                          "ExposureTime": 30.0,
+                          "Gain": -1,
+                          "Offset": 30,
+                          "Binning": {
+                            "$id": "68",
+                            "$type": "NINA.Core.Model.Equipment.BinningMode, NINA.Core",
+                            "X": 1,
+                            "Y": 1
+                          },
+                          "ImageType": "LIGHT",
+                          "ExposureCount": 0,
+                          "Parent": {
+                            "$ref": "63"
+                          },
+                          "ErrorBehavior": 2,
+                          "Attempts": 1
+                        }
+                      ]
+                    },
+                    "Triggers": {
+                      "$id": "69",
+                      "$type": "System.Collections.ObjectModel.ObservableCollection`1[[NINA.Sequencer.Trigger.ISequenceTrigger, NINA.Sequencer]], System.ObjectModel",
+                      "$values": [
+                        {
+                          "$id": "70",
+                          "$type": "NINA.Sequencer.Trigger.Autofocus.AutofocusAfterHFRIncreaseTrigger, NINA.Sequencer",
+                          "Amount": 5.0,
+                          "SampleSize": 10,
+                          "Parent": {
+                            "$ref": "63"
+                          },
+                          "TriggerRunner": {
+                            "$id": "71",
+                            "$type": "NINA.Sequencer.Container.SequentialContainer, NINA.Sequencer",
+                            "Strategy": {
+                              "$type": "NINA.Sequencer.Container.ExecutionStrategy.SequentialStrategy, NINA.Sequencer"
+                            },
+                            "Name": null,
+                            "Conditions": {
+                              "$id": "72",
+                              "$type": "System.Collections.ObjectModel.ObservableCollection`1[[NINA.Sequencer.Conditions.ISequenceCondition, NINA.Sequencer]], System.ObjectModel",
+                              "$values": []
+                            },
+                            "IsExpanded": true,
+                            "Items": {
+                              "$id": "73",
+                              "$type": "System.Collections.ObjectModel.ObservableCollection`1[[NINA.Sequencer.SequenceItem.ISequenceItem, NINA.Sequencer]], System.ObjectModel",
+                              "$values": [
+                                {
+                                  "$id": "74",
+                                  "$type": "NINA.Sequencer.SequenceItem.Autofocus.RunAutofocus, NINA.Sequencer",
+                                  "Parent": {
+                                    "$ref": "71"
+                                  },
+                                  "ErrorBehavior": 0,
+                                  "Attempts": 1
+                                }
+                              ]
+                            },
+                            "Triggers": {
+                              "$id": "75",
+                              "$type": "System.Collections.ObjectModel.ObservableCollection`1[[NINA.Sequencer.Trigger.ISequenceTrigger, NINA.Sequencer]], System.ObjectModel",
+                              "$values": []
+                            },
+                            "Parent": null,
+                            "ErrorBehavior": 0,
+                            "Attempts": 1
+                          }
+                        },
+                        {
+                          "$id": "76",
+                          "$type": "NINA.Sequencer.Trigger.Guider.RestoreGuiding, NINA.Sequencer",
+                          "Parent": {
+                            "$ref": "63"
+                          },
+                          "TriggerRunner": {
+                            "$id": "77",
+                            "$type": "NINA.Sequencer.Container.SequentialContainer, NINA.Sequencer",
+                            "Strategy": {
+                              "$type": "NINA.Sequencer.Container.ExecutionStrategy.SequentialStrategy, NINA.Sequencer"
+                            },
+                            "Name": null,
+                            "Conditions": {
+                              "$id": "78",
+                              "$type": "System.Collections.ObjectModel.ObservableCollection`1[[NINA.Sequencer.Conditions.ISequenceCondition, NINA.Sequencer]], System.ObjectModel",
+                              "$values": []
+                            },
+                            "IsExpanded": true,
+                            "Items": {
+                              "$id": "79",
+                              "$type": "System.Collections.ObjectModel.ObservableCollection`1[[NINA.Sequencer.SequenceItem.ISequenceItem, NINA.Sequencer]], System.ObjectModel",
+                              "$values": [
+                                {
+                                  "$id": "80",
+                                  "$type": "NINA.Sequencer.SequenceItem.Guider.StartGuiding, NINA.Sequencer",
+                                  "ForceCalibration": false,
+                                  "Parent": {
+                                    "$ref": "77"
+                                  },
+                                  "ErrorBehavior": 0,
+                                  "Attempts": 1
+                                }
+                              ]
+                            },
+                            "Triggers": {
+                              "$id": "81",
+                              "$type": "System.Collections.ObjectModel.ObservableCollection`1[[NINA.Sequencer.Trigger.ISequenceTrigger, NINA.Sequencer]], System.ObjectModel",
+                              "$values": []
+                            },
+                            "Parent": null,
+                            "ErrorBehavior": 0,
+                            "Attempts": 1
+                          }
+                        },
+                        {
+                          "$id": "82",
+                          "$type": "NINA.Sequencer.Trigger.MeridianFlip.MeridianFlipTrigger, NINA.Sequencer",
+                          "Parent": {
+                            "$ref": "63"
+                          },
+                          "TriggerRunner": {
+                            "$id": "83",
+                            "$type": "NINA.Sequencer.Container.SequentialContainer, NINA.Sequencer",
+                            "Strategy": {
+                              "$type": "NINA.Sequencer.Container.ExecutionStrategy.SequentialStrategy, NINA.Sequencer"
+                            },
+                            "Name": null,
+                            "Conditions": {
+                              "$id": "84",
+                              "$type": "System.Collections.ObjectModel.ObservableCollection`1[[NINA.Sequencer.Conditions.ISequenceCondition, NINA.Sequencer]], System.ObjectModel",
+                              "$values": []
+                            },
+                            "IsExpanded": true,
+                            "Items": {
+                              "$id": "85",
+                              "$type": "System.Collections.ObjectModel.ObservableCollection`1[[NINA.Sequencer.SequenceItem.ISequenceItem, NINA.Sequencer]], System.ObjectModel",
+                              "$values": []
+                            },
+                            "Triggers": {
+                              "$id": "86",
+                              "$type": "System.Collections.ObjectModel.ObservableCollection`1[[NINA.Sequencer.Trigger.ISequenceTrigger, NINA.Sequencer]], System.ObjectModel",
+                              "$values": []
+                            },
+                            "Parent": null,
+                            "ErrorBehavior": 0,
+                            "Attempts": 1
+                          }
+                        },
+                        {
+                          "$id": "87",
+                          "$type": "NINA.DiscordAlert.DiscordAlertSequenceItems.DiscordAlertOnErrorTrigger, Discord Alert",
+                          "Text": "@everyone",
+                          "Parent": {
+                            "$ref": "63"
+                          },
+                          "TriggerRunner": {
+                            "$id": "88",
+                            "$type": "NINA.Sequencer.Container.SequentialContainer, NINA.Sequencer",
+                            "Strategy": {
+                              "$type": "NINA.Sequencer.Container.ExecutionStrategy.SequentialStrategy, NINA.Sequencer"
+                            },
+                            "Name": null,
+                            "Conditions": {
+                              "$id": "89",
+                              "$type": "System.Collections.ObjectModel.ObservableCollection`1[[NINA.Sequencer.Conditions.ISequenceCondition, NINA.Sequencer]], System.ObjectModel",
+                              "$values": []
+                            },
+                            "IsExpanded": true,
+                            "Items": {
+                              "$id": "90",
+                              "$type": "System.Collections.ObjectModel.ObservableCollection`1[[NINA.Sequencer.SequenceItem.ISequenceItem, NINA.Sequencer]], System.ObjectModel",
+                              "$values": []
+                            },
+                            "Triggers": {
+                              "$id": "91",
+                              "$type": "System.Collections.ObjectModel.ObservableCollection`1[[NINA.Sequencer.Trigger.ISequenceTrigger, NINA.Sequencer]], System.ObjectModel",
+                              "$values": []
+                            },
+                            "Parent": null,
+                            "ErrorBehavior": 0,
+                            "Attempts": 1
+                          }
+                        }
+                      ]
+                    },
+                    "Parent": {
+                      "$ref": "36"
+                    },
+                    "ErrorBehavior": 0,
+                    "Attempts": 1
+                  }
+                ]
+              },
+              "Triggers": {
+                "$id": "92",
+                "$type": "System.Collections.ObjectModel.ObservableCollection`1[[NINA.Sequencer.Trigger.ISequenceTrigger, NINA.Sequencer]], System.ObjectModel",
+                "$values": [
+                  {
+                    "$id": "93",
+                    "$type": "NINA.DiscordAlert.DiscordAlertSequenceItems.DiscordAlertOnErrorTrigger, Discord Alert",
+                    "Text": "@everyone",
+                    "Parent": {
+                      "$ref": "36"
+                    },
+                    "TriggerRunner": {
+                      "$id": "94",
+                      "$type": "NINA.Sequencer.Container.SequentialContainer, NINA.Sequencer",
+                      "Strategy": {
+                        "$type": "NINA.Sequencer.Container.ExecutionStrategy.SequentialStrategy, NINA.Sequencer"
+                      },
+                      "Name": null,
+                      "Conditions": {
+                        "$id": "95",
+                        "$type": "System.Collections.ObjectModel.ObservableCollection`1[[NINA.Sequencer.Conditions.ISequenceCondition, NINA.Sequencer]], System.ObjectModel",
+                        "$values": []
+                      },
+                      "IsExpanded": true,
+                      "Items": {
+                        "$id": "96",
+                        "$type": "System.Collections.ObjectModel.ObservableCollection`1[[NINA.Sequencer.SequenceItem.ISequenceItem, NINA.Sequencer]], System.ObjectModel",
+                        "$values": []
+                      },
+                      "Triggers": {
+                        "$id": "97",
+                        "$type": "System.Collections.ObjectModel.ObservableCollection`1[[NINA.Sequencer.Trigger.ISequenceTrigger, NINA.Sequencer]], System.ObjectModel",
+                        "$values": []
+                      },
+                      "Parent": null,
+                      "ErrorBehavior": 0,
+                      "Attempts": 1
+                    }
+                  }
+                ]
+              },
+              "Parent": {
+                "$ref": "33"
+              },
+              "ErrorBehavior": 0,
+              "Attempts": 1
+            }
+          ]
+        },
+        "Triggers": {
+          "$id": "98",
+          "$type": "System.Collections.ObjectModel.ObservableCollection`1[[NINA.Sequencer.Trigger.ISequenceTrigger, NINA.Sequencer]], System.ObjectModel",
+          "$values": []
+        },
+        "Parent": {
+          "$ref": "1"
+        },
+        "ErrorBehavior": 0,
+        "Attempts": 1
+      },
+      {
+        "$id": "99",
+        "$type": "NINA.Sequencer.Container.EndAreaContainer, NINA.Sequencer",
+        "Strategy": {
+          "$type": "NINA.Sequencer.Container.ExecutionStrategy.SequentialStrategy, NINA.Sequencer"
+        },
+        "Name": "End",
+        "Conditions": {
+          "$id": "100",
+          "$type": "System.Collections.ObjectModel.ObservableCollection`1[[NINA.Sequencer.Conditions.ISequenceCondition, NINA.Sequencer]], System.ObjectModel",
+          "$values": []
+        },
+        "IsExpanded": true,
+        "Items": {
+          "$id": "101",
+          "$type": "System.Collections.ObjectModel.ObservableCollection`1[[NINA.Sequencer.SequenceItem.ISequenceItem, NINA.Sequencer]], System.ObjectModel",
+          "$values": [
+            {
+              "$id": "102",
+              "$type": "NINA.Sequencer.Container.ParallelContainer, NINA.Sequencer",
+              "Strategy": {
+                "$type": "NINA.Sequencer.Container.ExecutionStrategy.ParallelStrategy, NINA.Sequencer"
+              },
+              "Name": "Parallel Instruction Set",
+              "Conditions": {
+                "$id": "103",
+                "$type": "System.Collections.ObjectModel.ObservableCollection`1[[NINA.Sequencer.Conditions.ISequenceCondition, NINA.Sequencer]], System.ObjectModel",
+                "$values": []
+              },
+              "IsExpanded": true,
+              "Items": {
+                "$id": "104",
+                "$type": "System.Collections.ObjectModel.ObservableCollection`1[[NINA.Sequencer.SequenceItem.ISequenceItem, NINA.Sequencer]], System.ObjectModel",
+                "$values": [
+                  {
+                    "$id": "105",
+                    "$type": "NINA.Sequencer.SequenceItem.Telescope.FindHome, NINA.Sequencer",
+                    "Parent": {
+                      "$ref": "102"
+                    },
+                    "ErrorBehavior": 0,
+                    "Attempts": 1
+                  },
+                  {
+                    "$id": "106",
+                    "$type": "NINA.Sequencer.SequenceItem.Dome.FindHomeDome, NINA.Sequencer",
+                    "Parent": {
+                      "$ref": "102"
+                    },
+                    "ErrorBehavior": 0,
+                    "Attempts": 1
+                  }
+                ]
+              },
+              "Triggers": {
+                "$id": "107",
+                "$type": "System.Collections.ObjectModel.ObservableCollection`1[[NINA.Sequencer.Trigger.ISequenceTrigger, NINA.Sequencer]], System.ObjectModel",
+                "$values": []
+              },
+              "Parent": {
+                "$ref": "99"
+              },
+              "ErrorBehavior": 0,
+              "Attempts": 1
+            },
+            {
+              "$id": "108",
+              "$type": "NINA.Sequencer.SequenceItem.Connect.DisconnectAllEquipment, NINA.Sequencer",
+              "Parent": {
+                "$ref": "99"
+              },
+              "ErrorBehavior": 0,
+              "Attempts": 1
+            },
+            {
+              "$id": "109",
+              "$type": "NINA.DiscordAlert.DiscordAlertSequenceItems.DiscordMessageInstruction, Discord Alert",
+              "Text": "Sequence Finished",
+              "Parent": {
+                "$ref": "99"
+              },
+              "ErrorBehavior": 0,
+              "Attempts": 1
+            },
+            {
+              "$id": "110",
+              "$type": "DaleGhent.NINA.GroundStation.HTTP.HttpClient, DaleGhent.NINA.GroundStation",
+              "HttpMethod": 1,
+              "HttpUri": "https://www.pomfretastro.org/api/imaging/session-progress",
+              "HttpPostContentType": "text/plain",
+              "HttpPostBody": "Session Completed",
+              "HttpClientDescription": "",
+              "HttpAuthUsername": "pomfretastro",
+              "HttpAuthPassword": "1894",
+              "Parent": {
+                "$ref": "99"
+              },
+              "ErrorBehavior": 0,
+              "Attempts": 1
+            }
+          ]
+        },
+        "Triggers": {
+          "$id": "111",
+          "$type": "System.Collections.ObjectModel.ObservableCollection`1[[NINA.Sequencer.Trigger.ISequenceTrigger, NINA.Sequencer]], System.ObjectModel",
+          "$values": []
+        },
+        "Parent": {
+          "$ref": "1"
+        },
+        "ErrorBehavior": 0,
+        "Attempts": 1
+      }
+    ]
+  },
+  "Triggers": {
+    "$id": "112",
+    "$type": "System.Collections.ObjectModel.ObservableCollection`1[[NINA.Sequencer.Trigger.ISequenceTrigger, NINA.Sequencer]], System.ObjectModel",
+    "$values": []
+  },
+  "Parent": null,
+  "ErrorBehavior": 0,
+  "Attempts": 1
+}

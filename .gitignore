@@ -1,0 +1,42 @@
+# Dependencies
+**/node_modules/
+**/.pnp
+**/.pnp.js
+
+# Build / cache
+**/.next/
+**/out/
+**/dist/
+**/dist-ci/
+**/build/
+**/coverage/
+**/src-tauri/target/
+**/*.tsbuildinfo
+**/next-env.d.ts
+
+# Env & secrets — never commit real values
+**/.env
+**/.env.*
+!**/.env.example
+**/*.pem
+**/*service-account*.json
+**/credentials.json
+**/tenant.json
+
+# Vercel / tooling
+**/.vercel
+.DS_Store
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Installer artifacts
+**/*.dmg
+**/*.exe
+**/public/releases/*.dmg
+**/public/releases/*.exe
+
+# Python
+**/__pycache__/
+**/*.py[cod]
+**/.venv/

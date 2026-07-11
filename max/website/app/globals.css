@@ -1,0 +1,502 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 238, 233, 220;
+  --background-rgb: 8, 9, 10;
+  --muted-rgb: 157, 160, 167;
+  --surface-rgb: 21, 22, 22;
+  --line: rgba(255, 255, 255, 0.14);
+  --hover-bg: rgba(255, 255, 255, 0.06);
+  --lg-tint: rgba(28, 28, 32, 0.3);
+  --lg-tint-macro: rgba(20, 20, 24, 0.32);
+  --glass-border: rgba(255, 255, 255, 0.14);
+  --glass-border-bright: rgba(255, 255, 255, 0.22);
+  --glass-bg: var(--lg-tint-macro);
+  --glass-bg-hover: var(--hover-bg);
+
+  /* Apple Liquid Glass measured values (WWDC 2025) */
+  --lg-filter-fallback: blur(2px) saturate(180%) brightness(1.06) contrast(1.04);
+  --lg-filter: blur(2px) saturate(180%) brightness(1.06) contrast(1.04) url(#lg-refract);
+  --lg-filter-sm: blur(2px) saturate(180%) brightness(1.06) contrast(1.04) url(#lg-refract-sm);
+  --lg-bezier: cubic-bezier(0.32, 0.72, 0, 1);
+  --lg-bezel:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.06),
+    inset 0 0 6px 0 rgba(255, 255, 255, 0.04),
+    inset 0 2px 4px -2px rgba(255, 255, 255, 0.18),
+    inset 0 -2px 4px -2px rgba(0, 0, 0, 0.25);
+  --lg-rim:
+    inset 0 1px 1px rgba(255, 255, 255, 0.55),
+    inset 0 -1px 1px rgba(255, 255, 255, 0.3),
+    inset 1px 0 1px rgba(255, 255, 255, 0.2),
+    inset -1px 0 1px rgba(255, 255, 255, 0.2);
+  --radius-lg: 22px;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    background-color: rgb(var(--background-rgb));
+    color: rgb(var(--foreground-rgb));
+    font-family: 'SF Pro Text', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Helvetica Neue',
+      Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    letter-spacing: 0.01em;
+  }
+}
+
+@layer components {
+  /* ── Liquid Glass (Apple WWDC 2025 — 2px blur + squircle refraction + lit bezel) ── */
+
+  .lg-surface,
+  .lg-surface-sm {
+    position: relative;
+    isolation: isolate;
+    contain: layout paint;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    transition:
+      background 0.22s var(--lg-bezier),
+      border-color 0.22s var(--lg-bezier),
+      box-shadow 0.22s var(--lg-bezier);
+  }
+
+  .lg-surface {
+    background: rgba(255, 255, 255, 0.03);
+    box-shadow: var(--lg-bezel), var(--lg-rim);
+  }
+
+  .lg-surface-sm {
+    background: rgba(255, 255, 255, 0.04);
+    box-shadow: var(--lg-bezel);
+  }
+
+  .lg-surface > *,
+  .lg-surface-sm > * {
+    position: relative;
+    z-index: 2;
+  }
+
+  .glass-panel,
+  .glass-card {
+    @apply rounded-[22px];
+  }
+
+  .glass-panel,
+  .glass-card {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.035);
+    box-shadow: var(--lg-bezel), var(--lg-rim);
+    transition:
+      background 0.22s var(--lg-bezier),
+      border-color 0.22s var(--lg-bezier),
+      box-shadow 0.22s var(--lg-bezier);
+  }
+
+  .glass-panel > *,
+  .glass-card > *,
+  .glass-inset > *,
+  .glass-field > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .lg-glass-content {
+    position: relative;
+    z-index: 2;
+    pointer-events: auto;
+  }
+
+  #site-header,
+  #site-header .lg-glass-content {
+    opacity: 1 !important;
+    visibility: visible !important;
+  }
+
+  .header-glass-lens {
+    opacity: 1 !important;
+  }
+
+  #site-header.lg-header {
+    background: transparent;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    border-bottom: none;
+    box-shadow: none;
+  }
+
+  .header-glass-backdrop {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(10, 11, 12, 0.62);
+    backdrop-filter: blur(20px) saturate(165%) brightness(1.05);
+    -webkit-backdrop-filter: blur(20px) saturate(165%) brightness(1.05);
+    box-shadow: var(--lg-bezel);
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+  }
+
+  /* Safari: CSS-only header glass (liquidGL skipped — snapshot/WebGL unreliable). */
+  body.liquid-gl-safari .header-glass-backdrop {
+    opacity: 1 !important;
+    background: rgba(10, 11, 12, 0.72);
+  }
+
+  .header-glass-lens {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background: transparent;
+  }
+
+  /* CSS blur stays on until WebGL has painted; returns during snapshot/recapture. */
+  body.liquid-gl-active:not(.liquid-gl-ready) .header-glass-backdrop,
+  body.liquid-gl-capturing .header-glass-backdrop,
+  body.liquid-gl-fallback:not(.liquid-gl-safari) .header-glass-backdrop {
+    opacity: 1 !important;
+  }
+
+  body.liquid-gl-safari .header-glass-backdrop {
+    opacity: 1 !important;
+  }
+
+  body.liquid-gl-ready:not(.liquid-gl-capturing):not(.liquid-gl-fallback) .header-glass-backdrop {
+    opacity: 0;
+  }
+
+  body.liquid-gl-active .header-glass-lens {
+    background: transparent !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  body.liquid-gl-active #site-header {
+    z-index: 50;
+  }
+
+  body.liquid-gl-active .glass-inset,
+  body.liquid-gl-active .glass-field {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  .glass-inset,
+  .glass-field {
+    position: relative;
+    isolation: isolate;
+    contain: layout paint;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.025);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07);
+    transition:
+      background 0.22s var(--lg-bezier),
+      border-color 0.22s var(--lg-bezier),
+      box-shadow 0.22s var(--lg-bezier);
+  }
+
+  .glass-inset {
+    @apply rounded-xl;
+  }
+
+  .glass-field {
+    @apply rounded-lg px-3 py-2 text-fg;
+  }
+
+  .glass-card:hover {
+    border-color: var(--glass-border-bright);
+    background: rgba(255, 255, 255, 0.055);
+  }
+
+  .lg-header {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(10, 11, 12, 0.62);
+    backdrop-filter: blur(20px) saturate(165%) brightness(1.05);
+    -webkit-backdrop-filter: blur(20px) saturate(165%) brightness(1.05);
+    box-shadow: var(--lg-bezel);
+  }
+
+  .lg-nav-pill {
+    position: relative;
+    isolation: isolate;
+    contain: layout paint;
+    overflow: hidden;
+    border: 1px solid transparent;
+    border-radius: 9999px;
+    background: transparent;
+    transition:
+      background 0.22s var(--lg-bezier),
+      border-color 0.22s var(--lg-bezier),
+      box-shadow 0.22s var(--lg-bezier);
+  }
+
+  .lg-nav-pill-active,
+  .lg-nav-pill:hover {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: var(--glass-border);
+    box-shadow: var(--lg-bezel);
+  }
+
+  .lg-nav-pill-active {
+    border-color: var(--glass-border-bright);
+    background: rgba(255, 255, 255, 0.06);
+    box-shadow: var(--lg-bezel), var(--lg-rim);
+  }
+
+  .section-heading {
+    @apply font-display text-3xl font-semibold tracking-tight text-fg md:text-4xl;
+  }
+
+  .panel-placeholder {
+    @apply rounded-[22px];
+    position: relative;
+    isolation: isolate;
+    contain: layout paint;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.03);
+    box-shadow: var(--lg-bezel);
+  }
+
+  .product-frame-wrap {
+    @apply relative;
+  }
+
+  .product-frame {
+    @apply relative w-full overflow-hidden rounded-2xl bg-surface;
+    box-shadow:
+      0 40px 120px -50px rgba(0, 0, 0, 0.95),
+      0 0 0 1px rgba(255, 255, 255, 0.03) inset;
+  }
+
+  /*
+   * Gradient rim instead of a flat `border-white/10`. A uniform border reads as a
+   * hard full-width seam where the dark hero meets the bright screenshot. This
+   * fades the edge so the frame emerges from the background: brightest mid-sides,
+   * very faint at the very top so there's no obvious dividing line.
+   */
+  .product-frame::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.04) 0%,
+      rgba(255, 255, 255, 0.12) 22%,
+      rgba(255, 255, 255, 0.08) 70%,
+      rgba(255, 255, 255, 0.05) 100%
+    );
+    -webkit-mask:
+      linear-gradient(#000 0 0) content-box,
+      linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  .product-frame-placeholder {
+    @apply absolute inset-0 flex items-center justify-center;
+    background-image: linear-gradient(
+      145deg,
+      rgba(255, 255, 255, 0.05) 0%,
+      rgba(255, 255, 255, 0.01) 45%,
+      rgba(255, 255, 255, 0.04) 100%
+    );
+  }
+
+  .product-frame-placeholder-label {
+    @apply max-w-[80%] text-center text-sm leading-relaxed text-muted/75;
+  }
+
+  .hub-connector {
+    @apply relative overflow-hidden;
+    background: rgba(255, 255, 255, 0.12);
+  }
+
+  .hub-connector-h {
+    @apply h-px w-10 lg:w-16;
+  }
+
+  .hub-connector-v {
+    @apply my-1 h-8 w-px self-center;
+  }
+
+  .hub-connector::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      90deg,
+      rgba(150, 180, 240, 0) 0%,
+      rgba(150, 180, 240, 0.9) 50%,
+      rgba(150, 180, 240, 0) 100%
+    );
+    animation: hub-flow 2.4s linear infinite;
+  }
+
+  .hub-connector-v::after {
+    background: linear-gradient(
+      180deg,
+      rgba(150, 180, 240, 0) 0%,
+      rgba(150, 180, 240, 0.9) 50%,
+      rgba(150, 180, 240, 0) 100%
+    );
+    animation: hub-flow-v 2.4s linear infinite;
+  }
+
+  .checkout-billing-card {
+    @apply cursor-pointer border border-transparent;
+  }
+
+  .checkout-billing-card-active {
+    border-color: var(--glass-border-bright);
+    background: var(--hover-bg);
+    box-shadow:
+      0 4px 20px rgba(0, 0, 0, 0.32),
+      var(--lg-bezel),
+      var(--lg-rim);
+  }
+
+  .btn-primary,
+  .btn-secondary {
+    @apply relative inline-flex items-center justify-center overflow-hidden rounded-[22px] px-8 py-3 text-sm font-semibold text-fg;
+    isolation: isolate;
+    contain: layout paint;
+    border: 1px solid var(--glass-border);
+    background: rgba(255, 255, 255, 0.04);
+    box-shadow: var(--lg-bezel);
+    transition:
+      background 0.22s var(--lg-bezier),
+      border-color 0.22s var(--lg-bezier),
+      box-shadow 0.22s var(--lg-bezier);
+  }
+
+  .btn-primary:hover:not(:disabled),
+  .btn-secondary:hover:not(:disabled) {
+    background: var(--hover-bg);
+    border-color: var(--glass-border-bright);
+  }
+
+  .btn-primary {
+    @apply font-semibold;
+    background: rgb(var(--foreground-rgb));
+    color: rgb(var(--background-rgb));
+    border-color: transparent;
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    background: rgba(238, 233, 220, 0.92);
+  }
+
+  .btn-chip {
+    @apply relative inline-flex items-center justify-center overflow-hidden rounded-full px-3 py-1 text-xs font-medium text-fg disabled:opacity-50;
+    isolation: isolate;
+    contain: layout paint;
+    border: 1px solid var(--glass-border);
+    background: rgba(255, 255, 255, 0.04);
+    box-shadow: var(--lg-bezel);
+    transition:
+      background 0.22s var(--lg-bezier),
+      border-color 0.22s var(--lg-bezier),
+      box-shadow 0.22s var(--lg-bezier);
+  }
+
+  .btn-chip:hover:not(:disabled) {
+    background: var(--hover-bg);
+    border-color: var(--glass-border-bright);
+  }
+
+  .text-link {
+    @apply text-fg underline-offset-4 transition hover:text-white hover:underline;
+  }
+
+  .label-caps {
+    @apply text-sm font-medium uppercase tracking-[0.18em] text-muted;
+  }
+
+  .page-shell {
+    @apply mx-auto w-full max-w-[1360px] px-5 sm:px-8 lg:px-10;
+  }
+
+  .page-shell-narrow {
+    @apply mx-auto w-full max-w-3xl px-5 sm:px-8;
+  }
+
+  .page-shell-checkout {
+    @apply mx-auto w-full max-w-4xl px-5 sm:px-8;
+  }
+
+  .page-shell-form {
+    @apply mx-auto w-full max-w-lg px-5 sm:px-8;
+  }
+
+  .client-marquee-track {
+    animation: client-marquee 42s linear infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .client-marquee-track {
+      animation: none;
+      flex-wrap: wrap;
+      width: auto;
+      justify-content: center;
+    }
+
+    .hub-connector::after {
+      animation: none;
+    }
+  }
+
+  .plan-callout-edge {
+    stroke: rgba(255, 255, 255, 0.14);
+    stroke-width: 1;
+  }
+
+  .scheduler-web-edge {
+    stroke: rgba(255, 255, 255, 0.1);
+    stroke-width: 1;
+  }
+}
+
+@keyframes client-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes hub-flow {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes hub-flow-v {
+  from {
+    transform: translateY(-100%);
+  }
+  to {
+    transform: translateY(100%);
+  }
+}
